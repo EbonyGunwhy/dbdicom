@@ -174,8 +174,11 @@ class Manager():
         """ Returns the file path of the .pkl file"""
         if self.path is None:
             return None
+        dbdicom_folder = os.path.dirname(self.path) + '/dbdicom/' + os.path.basename(self.path)
+        if not os.path.isdir(dbdicom_folder):
+            os.makedirs(dbdicom_folder, exist_ok=True)
         filename = os.path.basename(os.path.normpath(self.path)) + ".pkl"
-        return os.path.join(self.path, filename) 
+        return os.path.join(dbdicom_folder, filename) 
 
     def npy(self, uid):
         # Not in use - default path for temporary storage in numoy format
@@ -189,6 +192,7 @@ class Manager():
         """ Writes the dataFrame as a .pkl file"""
         if self.path is None:
             return
+        
         file = self._pkl()
         self.register.to_pickle(file)
 
@@ -1156,9 +1160,9 @@ class Manager():
             if key in self.dataset:
                 del self.dataset[key]
             # delete on disk
-            file = self.filepath(key) 
-            if os.path.exists(file): 
-                os.remove(file)
+            #file = self.filepath(key) 
+            #if os.path.exists(file): 
+             #   os.remove(file)
         # and drop then from the dataframe
         self.register.drop(index=removed, inplace=True)
 
@@ -1264,7 +1268,9 @@ class Manager():
 
     def new_key(self):
         """Generate a new key"""
-        return os.path.join('dbdicom', dbdataset.new_uid() + '.dcm') 
+        dbdicom_folder = '../dbdicom/' + os.path.basename(self.path)
+        return os.path.join(dbdicom_folder, dbdataset.new_uid() + '.dcm')
+        #return os.path.join('dbdicom', dbdataset.new_uid() + '.dcm')
 
 
     def copy_instance_to_series(self, instance_key, target_keys, tmp, **kwargs):
