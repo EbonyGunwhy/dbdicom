@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import scipy
 from scipy.ndimage import affine_transform
-import nibabel as nib # unnecessary
 import dbdicom
+from dbdicom.utils.image import multislice_affine_transform
 
 
 
@@ -41,6 +41,7 @@ def _lists_have_equal_items(list1, list2):
 
     # Check if the sets are equal
     return set1 == set2
+
 
 def mask_curve_3d(masks, images, **kwargs):
     if not isinstance(masks, list):
@@ -217,6 +218,18 @@ def _summary_stats(data):
     }
         
 
+def array(series, on=None, **kwargs):
+    """Return the array overlaid on another series"""
+
+    if on is None:
+        array, _ = series.array(**kwargs)
+    else:
+        series_map = map_to(series, on)
+        array, _ = series_map.array(**kwargs)
+        if series_map != series:
+            series_map.remove()
+    return array
+
 
 def overlay(features):
     """ Ensure all the features are in the same geometry as the reference feature"""
@@ -249,8 +262,7 @@ def map_to(source, target, **kwargs):
             mapped = _map_series_to_slice_group(source, slice_group_target, affine_source, affine_slice_group[0], **kwargs)
             mapped_series.append(mapped)
             slice_group_target.remove()
-        desc = source.instance().SeriesDescription 
-        desc += ' mapped to ' + target.instance().SeriesDescription
+        desc = source.instance().SeriesDescription + ' [overlay]'
         mapped_series = dbdicom.merge(mapped_series, inplace=True)
         mapped_series.SeriesDescription = desc
     else:
@@ -265,87 +277,66 @@ def _map_series_to_slice_group(source, target, affine_source, affine_target, **k
         for affine_slice_group in affine_source:
             slice_group_source = source.new_sibling()
             slice_group_source.adopt(affine_slice_group[1])
-            mapped = _map_slice_group_to_slice_group(slice_group_source, target, affine_slice_group[0], affine_target, **kwargs)
+            mapped = _map_slice_group_to_slice_group(slice_group_source, affine_slice_group[0], target, affine_target, **kwargs)
             mapped_series.append(mapped)
             slice_group_source.remove()
         return dbdicom.merge(mapped_series, inplace=True)
     else:
-        return _map_slice_group_to_slice_group(source, target, affine_source[0], affine_target, **kwargs)
+        return _map_slice_group_to_slice_group(source, affine_source[0], target, affine_target, **kwargs)
 
 
-def _map_slice_group_to_slice_group(source, target, affine_source, affine_target, mask=False, label=False, cval=0):
+def _map_slice_group_to_slice_group(source, affine_source, target, output_affine, **kwargs):
 
-    # Get names for status updates
-    source_desc = source.instance().SeriesDescription
-    target_desc = target.instance().SeriesDescription
-
-    # Get transformation matrix
-    source_to_target = np.linalg.inv(affine_source).dot(affine_target)
-    source_to_target = np.around(source_to_target, 3) # remove round-off errors in the inversion
-    matrix, offset = nib.affines.to_matvec(source_to_target) 
-    
-    # Get arrays
+    # Get source arrays
     array_source, headers_source = source.array(['SliceLocation','AcquisitionTime'], pixels_first=True)
     array_target, headers_target = target.array(['SliceLocation','AcquisitionTime'], pixels_first=True)
 
-    #Perform transformation
+    # Get message status updates
+    source_desc = source.instance().SeriesDescription
+    target_desc = target.instance().SeriesDescription
     message = 'Mapping ' + source_desc + ' onto ' + target_desc
-    source.status.message(message)
-    output_shape = array_target.shape[:3]
-    nt, nk = array_source.shape[3], array_source.shape[4]
-    array_mapped = np.empty(output_shape + (nt, nk))
-    if mask:
-        order = 0 
-    else:
-        order = 3
-    cnt=0
-    for t in range(nt):
-        for k in range(nk):
-            cnt+=1
-            source.status.progress(cnt, nt*nk, message)
-            array_mapped[:,:,:,t,k] = affine_transform(
-                array_source[:,:,:,t,k],
-                matrix = matrix,
-                offset = offset,
-                output_shape = output_shape,
-                cval = cval,
-                order = order)
+    source.message(message)
 
-    # If source is a mask array, set values to [0,1]
-    if mask:
-        array_mapped[array_mapped > 0.5] = 1
-        array_mapped[array_mapped <= 0.5] = 0
-    elif label:
-        array_mapped = np.around(array_mapped)
-    
-    # If data needs to be saved, create new series
-    source.status.message('Saving results..')
-    desc = source.instance().SeriesDescription 
-    desc += ' mapped to ' + target.instance().SeriesDescription
-    mapped_series = source.new_sibling(SeriesDescription = desc)
-    ns, nt, nk = headers_target.shape[0], headers_source.shape[1], headers_source.shape[2]
+    array_mapped = multislice_affine_transform(
+        array_source, 
+        affine_source, 
+        output_affine, 
+        output_shape = array_target.shape[:3], 
+        slice_thickness = headers_source[0,0,0].SliceThickness, 
+        **kwargs,
+    )
+
+    # TODO
+    # Preserve source window settings and set the same in result
+    # 
+
+    # Retain source acquisition times
+    # Assign acquisition time of slice=0 to all slices
+    nt = headers_source.shape[1]
+    acq_times = [headers_source[0,t,0].AcquisitionTime for t in range(nt)]
+
+    # Create new series
+    mapped_series = source.new_sibling(suffix='overlay')
+    nt, nk = array_source.shape[3], array_source.shape[4]
+    ns = headers_target.shape[0] 
     cnt=0
     for t in range(nt):
-        # Retain source acquisition times
-        # Assign acquisition time of slice=0 to all slices
-        acq_time = headers_source[0,t,0].AcquisitionTime
         for k in range(nk):
             for s in range(ns):
                 cnt+=1
-                source.status.progress(cnt, ns*nt*nk, 'Saving results..')
+                source.progress(cnt, ns*nt*nk, 'Saving results..')
                 image = headers_target[s,0,0].copy_to(mapped_series)
-                image.AcquisitionTime = acq_time
-                image.set_pixel_array(array_mapped[:,:,s,t,k])
-    source.status.message('Finished mapping..')
+                image.AcquisitionTime = acq_times[t]
+                image.set_array(array_mapped[:,:,s,t,k])
     return mapped_series
+
 
 
 def mask_array(mask, on=None, dim='InstanceNumber'):
     """Map non-zero pixels onto another series"""
 
     if on is None:
-        arr, hdr = dbdicom.array(mask, sortby=['SliceLocation', dim], mask=True, pixels_first=True)
-        return arr[...,0], hdr[...,0]
+        return dbdicom.array(mask, sortby=['SliceLocation', dim], mask=True, pixels_first=True, first_volume=True)
 
     # Get transformation matrix
     mask.status.message('Loading transformation matrices..')
@@ -368,7 +359,6 @@ def mask_array(mask, on=None, dim='InstanceNumber'):
     else:
         mapped_arrays, mapped_headers = _map_mask_series_to_slice_group(
             mask, on, affine_source, affine_target[0], dim=dim)
-    mask.status.hide()
     return mapped_arrays, mapped_headers
 
 
@@ -397,19 +387,12 @@ def _map_mask_slice_group_to_slice_group(source, target, affine_source, affine_t
 
     if isinstance(source, list):
         status = source[0].status
-        dialog = source[0].dialog
     else:
         status = source.status
-        dialog = source.dialog
 
     # Get arrays
-    array_source, _ = dbdicom.array(source, sortby=['SliceLocation',dim], pixels_first=True)
-    array_target, headers_target = dbdicom.array(target, sortby=['SliceLocation', dim], pixels_first=True)
-
-    # Ignore spurious dimension
-    array_source = array_source[...,0]
-    array_target = array_target[...,0]
-    headers_target = headers_target[...,0]
+    array_source, headers_source = dbdicom.array(source, sortby=['SliceLocation',dim], pixels_first=True, first_volume=True)
+    array_target, headers_target = dbdicom.array(target, sortby=['SliceLocation',dim], pixels_first=True, first_volume=True)
 
     # For mapping mask onto series, the time dimensions must be the same.
     # If they are not, the mask is extruded on to the series time dimensions.
@@ -426,30 +409,20 @@ def _map_mask_slice_group_to_slice_group(source, target, affine_source, affine_t
             array_source[array_source > 0.5] = 1
             array_source[array_source <= 0.5] = 0
             return array_source, headers_target
-    
-    # Get transformation matrix
-    source_to_target = np.linalg.inv(affine_source).dot(affine_target)
-    source_to_target = np.around(source_to_target, 3) # to avoid round-off error in the inversion
-    matrix, offset = nib.affines.to_matvec(source_to_target)
-    
-    #Perform transformation
-    output_shape = array_target.shape[:3]
-    for k in range(nk):
-        status.progress(k+1, nk, 'Calculating overlay..')
-        array_target[:,:,:,k] = affine_transform(
-            array_source[:,:,:,k],
-            matrix = matrix,
-            offset = offset,
-            output_shape = output_shape,
-            order = 0)
-        
-    # Make sure the result is a mask
-    status.message('Converting to binary..')
-    array_target[array_target > 0.5] = 1
-    array_target[array_target <= 0.5] = 0 
 
-    # Return without spurious dimensions
+    # Perform the affine transformation 
+    array_target = multislice_affine_transform(
+        array_source, 
+        affine_source, 
+        affine_target, 
+        output_shape = array_target.shape[:3], 
+        slice_thickness = headers_source[0,0].SliceThickness, 
+        mask = True,
+    )
+
     return array_target, headers_target
+    
+    
         
 
 
@@ -1153,23 +1126,56 @@ def image_calculator(series1, series2, operation='series 1 - series 2', integer=
         array2 = img2.array()
         if operation == 'series 1 + series 2':
             array = array1 + array2
+            desc = ' [add]'
         elif operation == 'series 1 - series 2':
             array = array1 - array2
+            desc = ' [difference]'
         elif operation == 'series 1 / series 2':
             array = array1 / array2
+            desc = ' [divide]'
         elif operation == 'series 1 * series 2':
             array = array1 * array2
+            desc = ' [multiply]'
         elif operation == '(series 1 - series 2)/series 2':
             array = (array1 - array2)/array2
+            desc = ' [relative difference]'
         elif operation == 'average(series 1, series 2)':
             array = (array1 + array2)/2
+            desc = ' [average]'
         array[~np.isfinite(array)] = 0
         if integer:
             array = np.around(array)
         img2.set_array(array)
         _reset_window(img2, array.astype(np.ubyte))
         img2.clear()
-    series1.status.hide()
+    result.SeriesDescription = result.instance().SeriesDescription + desc
+    return result
+
+
+def n_images_calculator(series, operation='mean'):
+
+    # Use the first series as geometrical reference
+    reference = series[0]
+
+    # Get arrays for all series and stack into one array
+    array_ref, headers_ref = reference.array(sortby='SliceLocation', pixels_first=True)
+    array_all = [array_ref]
+    for i, s in enumerate(series[1:]):
+        reference.progress(i+1, len(series[1:]), 'Loading arrays')
+        array_s = array(s, on=reference, sortby='SliceLocation', pixels_first=True)
+        array_all.append(array_s)
+    array_all = np.stack(array_all, axis=-1)
+
+    # Perform calculation
+    reference.message('Calculating ' + operation)
+    if operation == 'sum':
+        array_all = np.sum(array_all, axis=-1)
+    elif operation == 'mean':
+        array_all = np.mean(array_all, axis=-1)
+
+    # Save as new series and return
+    result = reference.new_sibling(suffix=operation)
+    result.set_array(array_all, headers_ref, pixels_first=True)
     return result
 
 
@@ -1264,7 +1270,8 @@ def _resample_slice_group(series, affine_source, slice_group, voxel_size=[1.0, 1
 
     # Determine the transformation matrix and offset
     source_to_target = np.linalg.inv(affine_source).dot(affine_target)
-    matrix, offset = nib.affines.to_matvec(source_to_target)
+    #matrix, offset = nib.affines.to_matvec(source_to_target)
+    matrix, offset = source_to_target[:3,:3], source_to_target[:3,3]
     
     # Perform the affine transformation
     cnt=0
@@ -1274,7 +1281,7 @@ def _resample_slice_group(series, affine_source, slice_group, voxel_size=[1.0, 1
         for k in range(nk):
             cnt+=1
             series.status.progress(cnt, nt*nk, 'Performing transformation..')
-            resliced = scipy.ndimage.affine_transform(
+            resliced = affine_transform(
                 array[:,:,:,t,k],
                 matrix = matrix,
                 offset = offset,
@@ -1363,7 +1370,8 @@ def _reslice_slice_group(series, affine_source, slice_group, orientation='axial'
 
     # Determine the transformation matrix and offset
     source_to_target = np.linalg.inv(affine_source).dot(affine_target)
-    matrix, offset = nib.affines.to_matvec(source_to_target)
+    #matrix, offset = nib.affines.to_matvec(source_to_target)
+    matrix, offset = source_to_target[:3,:3], source_to_target[:3,3]
     
     # Get arrays
     array, headers = series.array(['SliceLocation','AcquisitionTime'], pixels_first=True)
@@ -1376,7 +1384,7 @@ def _reslice_slice_group(series, affine_source, slice_group, orientation='axial'
         for k in range(nk):
             cnt+=1
             series.status.progress(cnt, nt*nk, 'Calculating..')
-            resliced = scipy.ndimage.affine_transform(
+            resliced = affine_transform(
                 array[:,:,:,t,k],
                 matrix = matrix,
                 offset = offset,
