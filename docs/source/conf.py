@@ -28,7 +28,6 @@ extensions = ['sphinx.ext.napoleon', # parsing of NumPy and Google style docstri
                 'sphinx.ext.autosummary', # generates function/method/attribute summary lists
                 'sphinx.ext.viewcode', # viewing source code
                 'sphinx.ext.intersphinx', # generate links to the documentation of objects in external projects
-                'sphinx_rtd_theme', # ReadTheDocs theme
                 'myst_parser', # parser for markdown language
                 'sphinx_copybutton', # copy button for code blocks
                 'sphinx_remove_toctrees'] # selectively remove toctree objects from pages
