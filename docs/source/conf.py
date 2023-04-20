@@ -64,7 +64,12 @@ remove_from_toctrees = ["_autosummary/*"]
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for a list of builtin themes
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'pydata_sphinx_theme'
+
+html_theme_options = {
+    "github_url": "https://github.com/QIB-Sheffield/dbdicom",
+    "collapse_navigation": True,
+    }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
