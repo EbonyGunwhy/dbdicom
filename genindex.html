@@ -1,0 +1,968 @@
+
+<!DOCTYPE html>
+
+
+<html lang="en" data-content_root="./" >
+
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Index &#8212; dbdicom 1.0 documentation</title>
+  
+  
+  
+  <script data-cfasync="false">
+    document.documentElement.dataset.mode = localStorage.getItem("mode") || "";
+    document.documentElement.dataset.theme = localStorage.getItem("theme") || "light";
+  </script>
+  
+  <!-- Loaded before other Sphinx assets -->
+  <link href="_static/styles/theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+<link href="_static/styles/bootstrap.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+<link href="_static/styles/pydata-sphinx-theme.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+
+  
+  <link href="_static/vendor/fontawesome/6.5.1/css/all.min.css?digest=8d27b9dea8ad943066ae" rel="stylesheet" />
+  <link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.1/webfonts/fa-solid-900.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.1/webfonts/fa-brands-400.woff2" />
+<link rel="preload" as="font" type="font/woff2" crossorigin href="_static/vendor/fontawesome/6.5.1/webfonts/fa-regular-400.woff2" />
+
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/design-style.1e8bd061cd6da7fc9cf755528e8ffc24.min.css?v=0a3b3ea7" />
+  
+  <!-- Pre-loaded scripts that we'll load fully later -->
+  <link rel="preload" as="script" href="_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae" />
+<link rel="preload" as="script" href="_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae" />
+  <script src="_static/vendor/fontawesome/6.5.1/js/all.min.js?digest=8d27b9dea8ad943066ae"></script>
+
+    <script src="_static/documentation_options.js?v=f2a433a1"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=36754332"></script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'genindex';</script>
+    <link rel="index" title="Index" href="#" />
+    <link rel="search" title="Search" href="search.html" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <meta name="docsearch:language" content="en"/>
+  </head>
+  
+  
+  <body data-bs-spy="scroll" data-bs-target=".bd-toc-nav" data-offset="180" data-bs-root-margin="0px 0px -60%" data-default-mode="">
+
+  
+  
+  <a id="pst-skip-link" class="skip-link" href="#main-content">Skip to main content</a>
+  
+  <div id="pst-scroll-pixel-helper"></div>
+  
+  <button type="button" class="btn rounded-pill" id="pst-back-to-top">
+    <i class="fa-solid fa-arrow-up"></i>
+    Back to top
+  </button>
+
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__primary"
+          id="__primary"/>
+  <label class="overlay overlay-primary" for="__primary"></label>
+  
+  <input type="checkbox"
+          class="sidebar-toggle"
+          name="__secondary"
+          id="__secondary"/>
+  <label class="overlay overlay-secondary" for="__secondary"></label>
+  
+  <div class="search-button__wrapper">
+    <div class="search-button__overlay"></div>
+    <div class="search-button__search-container">
+<form class="bd-search d-flex align-items-center"
+      action="search.html"
+      method="get">
+  <i class="fa-solid fa-magnifying-glass"></i>
+  <input type="search"
+         class="form-control"
+         name="q"
+         id="search-input"
+         placeholder="Search the docs ..."
+         aria-label="Search the docs ..."
+         autocomplete="off"
+         autocorrect="off"
+         autocapitalize="off"
+         spellcheck="false"/>
+  <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd>K</kbd></span>
+</form></div>
+  </div>
+  
+    <header class="bd-header navbar navbar-expand-lg bd-navbar">
+<div class="bd-header__inner bd-page-width">
+  <label class="sidebar-toggle primary-toggle" for="__primary">
+    <span class="fa-solid fa-bars"></span>
+  </label>
+  
+  
+  <div class="col-lg-3 navbar-header-items__start">
+    
+      <div class="navbar-item">
+
+  
+
+<a class="navbar-brand logo" href="index.html">
+  
+  
+  
+  
+  
+    
+    
+      
+    
+    
+    <img src="_static/dbd.png" class="logo__image only-light" alt="dbdicom 1.0 documentation - Home"/>
+    <script>document.write(`<img src="_static/dbd.png" class="logo__image only-dark" alt="dbdicom 1.0 documentation - Home"/>`);</script>
+  
+  
+</a></div>
+    
+  </div>
+  
+  <div class="col-lg-9 navbar-header-items">
+    
+    <div class="me-auto navbar-header-items__center">
+      
+        <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="user_guide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="reference/index.html">
+                        Reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="tutorials/index.html">
+                        Tutorials
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="developers_guide/index.html">
+                        Developer guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="about/index.html">
+                        About
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+      
+    </div>
+    
+    
+    <div class="navbar-header-items__end">
+      
+        <div class="navbar-item navbar-persistent--container">
+          
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+        </div>
+      
+      
+        <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+      
+        <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/QIB-Sheffield/dbdicom" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+      
+    </div>
+    
+  </div>
+  
+  
+    <div class="navbar-persistent--mobile">
+
+ <script>
+ document.write(`
+   <button class="btn navbar-btn search-button-field search-button__button" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <i class="fa-solid fa-magnifying-glass"></i>
+    <span class="search-button__default-text">Search</span>
+    <span class="search-button__kbd-shortcut"><kbd class="kbd-shortcut__modifier">Ctrl</kbd>+<kbd class="kbd-shortcut__modifier">K</kbd></span>
+   </button>
+ `);
+ </script>
+    </div>
+  
+
+  
+</div>
+
+    </header>
+  
+
+  <div class="bd-container">
+    <div class="bd-container__inner bd-page-width">
+      
+      
+      
+        
+      
+      <div class="bd-sidebar-primary bd-sidebar hide-on-wide">
+        
+
+  
+  <div class="sidebar-header-items sidebar-primary__section">
+    
+    
+      <div class="sidebar-header-items__center">
+        
+          <div class="navbar-item">
+<nav class="navbar-nav">
+  <ul class="bd-navbar-elements navbar-nav">
+    
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="user_guide/index.html">
+                        User guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="reference/index.html">
+                        Reference
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="tutorials/index.html">
+                        Tutorials
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="developers_guide/index.html">
+                        Developer guide
+                      </a>
+                    </li>
+                
+
+                    <li class="nav-item">
+                      <a class="nav-link nav-internal" href="about/index.html">
+                        About
+                      </a>
+                    </li>
+                
+  </ul>
+</nav></div>
+        
+      </div>
+    
+    
+    
+      <div class="sidebar-header-items__end">
+        
+          <div class="navbar-item">
+
+<script>
+document.write(`
+  <button class="btn btn-sm navbar-btn theme-switch-button" title="light/dark" aria-label="light/dark" data-bs-placement="bottom" data-bs-toggle="tooltip">
+    <span class="theme-switch nav-link" data-mode="light"><i class="fa-solid fa-sun fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="dark"><i class="fa-solid fa-moon fa-lg"></i></span>
+    <span class="theme-switch nav-link" data-mode="auto"><i class="fa-solid fa-circle-half-stroke fa-lg"></i></span>
+  </button>
+`);
+</script></div>
+        
+          <div class="navbar-item"><ul class="navbar-icon-links navbar-nav"
+    aria-label="Icon Links">
+        <li class="nav-item">
+          
+          
+          
+          
+          
+          
+          
+          
+          <a href="https://github.com/QIB-Sheffield/dbdicom" title="GitHub" class="nav-link" rel="noopener" target="_blank" data-bs-toggle="tooltip" data-bs-placement="bottom"><span><i class="fa-brands fa-square-github fa-lg" aria-hidden="true"></i></span>
+            <span class="sr-only">GitHub</span></a>
+        </li>
+</ul></div>
+        
+      </div>
+    
+  </div>
+  
+  
+  <div class="sidebar-primary-items__end sidebar-primary__section">
+  </div>
+  
+  <div id="rtd-footer-container"></div>
+
+
+      </div>
+      
+      <main id="main-content" class="bd-main">
+        
+        
+          <div class="bd-content">
+            <div class="bd-article-container">
+              
+              <div class="bd-header-article"></div>
+              
+              
+              
+                
+<div id="searchbox"></div>
+                <article class="bd-article">
+                  
+
+<h1 id="index">Index</h1>
+
+<div class="genindex-jumpbox">
+ <a href="#A"><strong>A</strong></a>
+ | <a href="#B"><strong>B</strong></a>
+ | <a href="#C"><strong>C</strong></a>
+ | <a href="#D"><strong>D</strong></a>
+ | <a href="#E"><strong>E</strong></a>
+ | <a href="#F"><strong>F</strong></a>
+ | <a href="#G"><strong>G</strong></a>
+ | <a href="#I"><strong>I</strong></a>
+ | <a href="#K"><strong>K</strong></a>
+ | <a href="#L"><strong>L</strong></a>
+ | <a href="#M"><strong>M</strong></a>
+ | <a href="#N"><strong>N</strong></a>
+ | <a href="#O"><strong>O</strong></a>
+ | <a href="#P"><strong>P</strong></a>
+ | <a href="#R"><strong>R</strong></a>
+ | <a href="#S"><strong>S</strong></a>
+ | <a href="#T"><strong>T</strong></a>
+ | <a href="#U"><strong>U</strong></a>
+ | <a href="#V"><strong>V</strong></a>
+ | <a href="#W"><strong>W</strong></a>
+ | <a href="#Z"><strong>Z</strong></a>
+ 
+</div>
+<h2 id="A">A</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Series.affine.html#dbdicom.Series.affine">affine() (dbdicom.Series method)</a>
+</li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.align_center_of_mass_3d">align_center_of_mass_3d() (in module dbdicom.wrappers.dipy)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.area_closing_2d">area_closing_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.area_closing_3d">area_closing_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.area_opening_2d">area_opening_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.area_opening_3d">area_opening_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.array">array() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.as_series.html#dbdicom.as_series">as_series() (in module dbdicom)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="B">B</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.binary_fill_holes">binary_fill_holes() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="C">C</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.canny">canny() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.children.html#dbdicom.Record.children">children() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.clear.html#dbdicom.Record.clear">clear() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.closing_2d">closing_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.closing_3d">closing_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.convex_hull_image">convex_hull_image() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.convex_hull_image_3d">convex_hull_image_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.copy.html#dbdicom.Record.copy">copy() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.copy_to.html#dbdicom.Record.copy_to">copy_to() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.coregister_2d_to_2d">coregister_2d_to_2d() (in module dbdicom.wrappers.dipy)</a>
+
+      <ul>
+        <li><a href="reference/extensions.elastix.html#dbdicom.wrappers.elastix.coregister_2d_to_2d">(in module dbdicom.wrappers.elastix)</a>
+</li>
+        <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.coregister_2d_to_2d">(in module dbdicom.wrappers.skimage)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.elastix.html#dbdicom.wrappers.elastix.coregister_2d_to_3d">coregister_2d_to_3d() (in module dbdicom.wrappers.elastix)</a>
+</li>
+      <li><a href="reference/extensions.elastix.html#dbdicom.wrappers.elastix.coregister_3d_to_2d">coregister_3d_to_2d() (in module dbdicom.wrappers.elastix)</a>
+</li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.coregister_3d_to_3d">coregister_3d_to_3d() (in module dbdicom.wrappers.dipy)</a>
+
+      <ul>
+        <li><a href="reference/extensions.elastix.html#dbdicom.wrappers.elastix.coregister_3d_to_3d">(in module dbdicom.wrappers.elastix)</a>
+</li>
+        <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.coregister_3d_to_3d">(in module dbdicom.wrappers.skimage)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.coregister_affine_3d">coregister_affine_3d() (in module dbdicom.wrappers.dipy)</a>
+</li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.coregister_rigid_3d">coregister_rigid_3d() (in module dbdicom.wrappers.dipy)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.coregister_series_2d_to_2d">coregister_series_2d_to_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.coregister_translation_3d">coregister_translation_3d() (in module dbdicom.wrappers.dipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="D">D</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.database.html#dbdicom.Record.database">database() (dbdicom.Record method)</a>
+
+      <ul>
+        <li><a href="reference/generated/dbdicom.database.html#dbdicom.database">(in module dbdicom)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/generated/dbdicom.database_hollywood.html#dbdicom.database_hollywood">database_hollywood() (in module dbdicom)</a>
+</li>
+      <li>
+    dbdicom.wrappers.dipy
+
+      <ul>
+        <li><a href="reference/extensions.dipy.html#module-dbdicom.wrappers.dipy">module</a>
+</li>
+      </ul></li>
+      <li>
+    dbdicom.wrappers.elastix
+
+      <ul>
+        <li><a href="reference/extensions.elastix.html#module-dbdicom.wrappers.elastix">module</a>
+</li>
+      </ul></li>
+      <li>
+    dbdicom.wrappers.numpy
+
+      <ul>
+        <li><a href="reference/extensions.numpy.html#module-dbdicom.wrappers.numpy">module</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li>
+    dbdicom.wrappers.scipy
+
+      <ul>
+        <li><a href="reference/extensions.scipy.html#module-dbdicom.wrappers.scipy">module</a>
+</li>
+      </ul></li>
+      <li>
+    dbdicom.wrappers.skimage
+
+      <ul>
+        <li><a href="reference/extensions.skimage.html#module-dbdicom.wrappers.skimage">module</a>
+</li>
+      </ul></li>
+      <li>
+    dbdicom.wrappers.sklearn
+
+      <ul>
+        <li><a href="reference/extensions.sklearn.html#module-dbdicom.wrappers.sklearn">module</a>
+</li>
+      </ul></li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.distance_transform_edt_3d">distance_transform_edt_3d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="E">E</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.empty.html#dbdicom.Record.empty">empty() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.export_as_csv.html#dbdicom.Record.export_as_csv">export_as_csv() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.export_as_dicom.html#dbdicom.Record.export_as_dicom">export_as_dicom() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.export_as_nifti.html#dbdicom.Record.export_as_nifti">export_as_nifti() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.export_as_npy.html#dbdicom.Record.export_as_npy">export_as_npy() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.export_as_png.html#dbdicom.Record.export_as_png">export_as_png() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.extract_largest_cluster_3d">extract_largest_cluster_3d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="F">F</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.files.html#dbdicom.Record.files">files() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.fourier_ellipsoid">fourier_ellipsoid() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.fourier_gaussian">fourier_gaussian() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.fourier_shift">fourier_shift() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.fourier_uniform">fourier_uniform() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="G">G</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.gaussian_filter">gaussian_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.gaussian_filter_3d">gaussian_filter_3d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.gaussian_gradient_magnitude">gaussian_gradient_magnitude() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.gaussian_laplace">gaussian_laplace() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="I">I</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.image_calculator">image_calculator() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Database.import_dicom.html#dbdicom.Database.import_dicom">import_dicom() (dbdicom.Database method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.invert_deformation_field">invert_deformation_field() (in module dbdicom.wrappers.dipy)</a>
+
+      <ul>
+        <li><a href="reference/extensions.elastix.html#dbdicom.wrappers.elastix.invert_deformation_field">(in module dbdicom.wrappers.elastix)</a>
+</li>
+      </ul></li>
+  </ul></td>
+</tr></table>
+
+<h2 id="K">K</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.sklearn.html#dbdicom.wrappers.sklearn.kmeans">kmeans() (in module dbdicom.wrappers.sklearn)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="L">L</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.label.html#dbdicom.Record.label">label() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.label_2d">label_2d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.label_3d">label_3d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.laplace">laplace() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.load.html#dbdicom.Record.load">load() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="M">M</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.map_to">map_to() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.mask_array">mask_array() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.mask_curve_3d">mask_curve_3d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.mask_statistics">mask_statistics() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.sklearn.html#dbdicom.wrappers.sklearn.masks_to_label">masks_to_label() (in module dbdicom.wrappers.sklearn)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.maximum_filter">maximum_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.numpy.html#dbdicom.wrappers.numpy.maximum_intensity_projection">maximum_intensity_projection() (in module dbdicom.wrappers.numpy)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.mdreg_constant_2d">mdreg_constant_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.mdreg_constant_3d">mdreg_constant_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.numpy.html#dbdicom.wrappers.numpy.mean_intensity_projection">mean_intensity_projection() (in module dbdicom.wrappers.numpy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.median_filter">median_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.median_otsu">median_otsu() (in module dbdicom.wrappers.dipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.message.html#dbdicom.Record.message">message() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.minimum_filter">minimum_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li>
+    module
+
+      <ul>
+        <li><a href="reference/extensions.dipy.html#module-dbdicom.wrappers.dipy">dbdicom.wrappers.dipy</a>
+</li>
+        <li><a href="reference/extensions.elastix.html#module-dbdicom.wrappers.elastix">dbdicom.wrappers.elastix</a>
+</li>
+        <li><a href="reference/extensions.numpy.html#module-dbdicom.wrappers.numpy">dbdicom.wrappers.numpy</a>
+</li>
+        <li><a href="reference/extensions.scipy.html#module-dbdicom.wrappers.scipy">dbdicom.wrappers.scipy</a>
+</li>
+        <li><a href="reference/extensions.skimage.html#module-dbdicom.wrappers.skimage">dbdicom.wrappers.skimage</a>
+</li>
+        <li><a href="reference/extensions.sklearn.html#module-dbdicom.wrappers.sklearn">dbdicom.wrappers.sklearn</a>
+</li>
+      </ul></li>
+      <li><a href="reference/generated/dbdicom.Record.move_to.html#dbdicom.Record.move_to">move_to() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.mute.html#dbdicom.Record.mute">mute() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="N">N</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.n_images_calculator">n_images_calculator() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Series.ndarray.html#dbdicom.Series.ndarray">ndarray() (dbdicom.Series method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.new_child.html#dbdicom.Record.new_child">new_child() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.new_patient.html#dbdicom.Record.new_patient">new_patient() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.new_pibling.html#dbdicom.Record.new_pibling">new_pibling() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.new_series.html#dbdicom.Record.new_series">new_series() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.new_sibling.html#dbdicom.Record.new_sibling">new_sibling() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.new_study.html#dbdicom.Record.new_study">new_study() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.numpy.html#dbdicom.wrappers.numpy.norm_projection">norm_projection() (in module dbdicom.wrappers.numpy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="O">O</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.ones.html#dbdicom.ones">ones() (in module dbdicom)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.opening_2d">opening_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.opening_3d">opening_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.overlay">overlay() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="P">P</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.parent.html#dbdicom.Record.parent">parent() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.path.html#dbdicom.Record.path">path() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.patient.html#dbdicom.patient">patient() (in module dbdicom)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.patients.html#dbdicom.Record.patients">patients() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.peak_local_max_3d">peak_local_max_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.percentile_filter">percentile_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.prewitt_filter">prewitt_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.print.html#dbdicom.Record.print">print() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.progress.html#dbdicom.Record.progress">progress() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="R">R</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.rank_filter">rank_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.remove.html#dbdicom.Record.remove">remove() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.remove_small_holes_2d">remove_small_holes_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.remove_small_holes_3d">remove_small_holes_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.resample">resample() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.reslice">reslice() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.restore.html#dbdicom.Record.restore">restore() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="S">S</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.Record.save.html#dbdicom.Record.save">save() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/extensions.sklearn.html#dbdicom.wrappers.sklearn.sequential_kmeans">sequential_kmeans() (in module dbdicom.wrappers.sklearn)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.series.html#dbdicom.Record.series">series() (dbdicom.Record method)</a>
+
+      <ul>
+        <li><a href="reference/generated/dbdicom.series.html#dbdicom.series">(in module dbdicom)</a>
+</li>
+      </ul></li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.series_calculator">series_calculator() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Series.set_affine.html#dbdicom.Series.set_affine">set_affine() (dbdicom.Series method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Series.set_ndarray.html#dbdicom.Series.set_ndarray">set_ndarray() (dbdicom.Series method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.siblings.html#dbdicom.Record.siblings">siblings() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.skeletonize">skeletonize() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.skeletonize_3d">skeletonize_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Series.slice_groups.html#dbdicom.Series.slice_groups">slice_groups() (dbdicom.Series method)</a>
+</li>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.sobel_filter">sobel_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Series.split_by.html#dbdicom.Series.split_by">split_by() (dbdicom.Series method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.studies.html#dbdicom.Record.studies">studies() (dbdicom.Record method)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.study.html#dbdicom.study">study() (in module dbdicom)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Series.subseries.html#dbdicom.Series.subseries">subseries() (dbdicom.Series method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="T">T</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.numpy.html#dbdicom.wrappers.numpy.threshold">threshold() (in module dbdicom.wrappers.numpy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="U">U</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.uniform_filter">uniform_filter() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.uniform_filter_3d">uniform_filter_3d() (in module dbdicom.wrappers.scipy)</a>
+</li>
+      <li><a href="reference/generated/dbdicom.Record.unmute.html#dbdicom.Record.unmute">unmute() (dbdicom.Record method)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="V">V</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.volume_features">volume_features() (in module dbdicom.wrappers.skimage)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="W">W</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.warp">warp() (in module dbdicom.wrappers.dipy)</a>
+
+      <ul>
+        <li><a href="reference/extensions.elastix.html#dbdicom.wrappers.elastix.warp">(in module dbdicom.wrappers.elastix)</a>
+</li>
+        <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.warp">(in module dbdicom.wrappers.skimage)</a>
+</li>
+      </ul></li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.watershed_2d">watershed_2d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.skimage.html#dbdicom.wrappers.skimage.watershed_3d">watershed_3d() (in module dbdicom.wrappers.skimage)</a>
+</li>
+      <li><a href="reference/extensions.dipy.html#dbdicom.wrappers.dipy.WIP_coregister_rigid_3d">WIP_coregister_rigid_3d() (in module dbdicom.wrappers.dipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+<h2 id="Z">Z</h2>
+<table style="width: 100%" class="indextable genindextable"><tr>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/generated/dbdicom.zeros.html#dbdicom.zeros">zeros() (in module dbdicom)</a>
+</li>
+  </ul></td>
+  <td style="width: 33%; vertical-align: top;"><ul>
+      <li><a href="reference/extensions.scipy.html#dbdicom.wrappers.scipy.zoom">zoom() (in module dbdicom.wrappers.scipy)</a>
+</li>
+  </ul></td>
+</tr></table>
+
+
+
+                </article>
+              
+              
+              
+              
+              
+                <footer class="prev-next-footer">
+                  
+<div class="prev-next-area">
+</div>
+                </footer>
+              
+            </div>
+            
+            
+              
+                <div class="bd-sidebar-secondary bd-toc"></div>
+              
+            
+          </div>
+          <footer class="bd-footer-content">
+            
+          </footer>
+        
+      </main>
+    </div>
+  </div>
+  
+  <!-- Scripts loaded after <body> so the DOM is not blocked -->
+  <script src="_static/scripts/bootstrap.js?digest=8d27b9dea8ad943066ae"></script>
+<script src="_static/scripts/pydata-sphinx-theme.js?digest=8d27b9dea8ad943066ae"></script>
+
+  <footer class="bd-footer">
+<div class="bd-footer__inner bd-page-width">
+  
+    <div class="footer-items__start">
+      
+        <div class="footer-item">
+
+  <p class="copyright">
+    
+      © Copyright 2022, QIB-Sheffield.
+      <br/>
+    
+  </p>
+</div>
+      
+        <div class="footer-item">
+
+  <p class="sphinx-version">
+    Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.2.6.
+    <br/>
+  </p>
+</div>
+      
+    </div>
+  
+  
+  
+    <div class="footer-items__end">
+      
+        <div class="footer-item">
+<p class="theme-version">
+  Built with the <a href="https://pydata-sphinx-theme.readthedocs.io/en/stable/index.html">PyData Sphinx Theme</a> 0.15.2.
+</p></div>
+      
+    </div>
+  
+</div>
+
+  </footer>
+  </body>
+</html>
