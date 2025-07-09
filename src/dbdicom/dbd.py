@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 import json
 from typing import Union
+import zipfile
 
 from tqdm import tqdm
 import numpy as np
@@ -878,6 +879,34 @@ class DataBaseDicom():
         dbdataset.write(ds, os.path.join(self.path, rel_path))
         # Add an entry in the register
         register.add_instance(self.register, attr, rel_path)
+
+
+    def archive(self, archive_path):
+        # TODO add flat=True option for zipping at patient level
+        for pt in tqdm(self.register, desc='Archiving '):
+            for st in pt['studies']:
+                zip_dir = os.path.join(
+                    archive_path,
+                    f"Patient__{pt['PatientID']}", 
+                    f"Study__{st['StudyID']}__{st['StudyDescription']}", 
+                )
+                os.makedirs(zip_dir, exist_ok=True)
+                for sr in st['series']:
+                    try:
+                        zip_file = os.path.join(
+                            zip_dir, 
+                            f"Series__{sr['SeriesNumber']}__{sr['SeriesDescription']}.zip",
+                        )
+                        with zipfile.ZipFile(zip_file, 'w') as zipf:
+                            for rel_path in sr['instances'].values():
+                                file = os.path.join(self.path, rel_path)
+                                zipf.write(file, arcname=os.path.basename(file))
+                    except Exception as e:
+                        raise RuntimeError(
+                            f"Error extracting series {sr['SeriesDescription']} "
+                            f"in study {st['StudyDescription']} of patient {pt['PatientID']}."
+                        )
+
 
 
 

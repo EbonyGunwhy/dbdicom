@@ -1,8 +1,16 @@
+import os
+import shutil
+import zipfile
+from pathlib import Path
 from typing import Union
+from tqdm import tqdm
+
 
 import vreg
 
 from dbdicom.dbd import DataBaseDicom
+
+
 
 
 def open(path:str) -> DataBaseDicom:
@@ -363,10 +371,74 @@ def unique(pars:list, entity:list) -> dict:
     return u
 
 
+def archive(path, archive_path):
+    dbd = open(path)
+    dbd.archive(archive_path)
+    dbd.close()
 
+
+def restore(archive_path, path):
+    _copy_and_extract_zips(archive_path, path)
+    dbd = open(path)
+    dbd.close()
+
+
+def _copy_and_extract_zips(src_folder, dest_folder):
+    if not os.path.exists(dest_folder):
+        os.makedirs(dest_folder)
+
+    # First pass: count total files
+    total_files = sum(len(files) for _, _, files in os.walk(src_folder))
+
+    with tqdm(total=total_files, desc="Copying and extracting") as pbar:
+        for root, dirs, files in os.walk(src_folder):
+            rel_path = os.path.relpath(root, src_folder)
+            dest_path = os.path.join(dest_folder, rel_path)
+            os.makedirs(dest_path, exist_ok=True)
+
+            for file in files:
+                src_file_path = os.path.join(root, file)
+                dest_file_path = os.path.join(dest_path, file)
+
+                if file.lower().endswith('.zip'):
+                    try:
+                        zip_dest_folder = dest_file_path[:-4]
+                        with zipfile.ZipFile(src_file_path, 'r') as zip_ref:
+                            zip_ref.extractall(zip_dest_folder)
+                        #tqdm.write(f"Extracted ZIP: {src_file_path}")
+                        #_flatten_folder(zip_dest_folder) # still needed?
+                    except zipfile.BadZipFile:
+                        tqdm.write(f"Bad ZIP file skipped: {src_file_path}")
+                else:
+                    shutil.copy2(src_file_path, dest_file_path)
+
+                pbar.update(1)
+
+
+def _flatten_folder(root_folder):
+    for dirpath, dirnames, filenames in os.walk(root_folder, topdown=False):
+        for filename in filenames:
+            src_path = os.path.join(dirpath, filename)
+            dst_path = os.path.join(root_folder, filename)
+            
+            # If file with same name exists, optionally rename or skip
+            if os.path.exists(dst_path):
+                base, ext = os.path.splitext(filename)
+                counter = 1
+                while os.path.exists(dst_path):
+                    dst_path = os.path.join(root_folder, f"{base}_{counter}{ext}")
+                    counter += 1
+
+            shutil.move(src_path, dst_path)
+
+        # Remove empty subdirectories (but skip the root folder)
+        if dirpath != root_folder:
+            try:
+                os.rmdir(dirpath)
+            except OSError:
+                print(f"Could not remove {dirpath} — not empty or in use.")
 
 
 
 if __name__=='__main__':
-
     pass
