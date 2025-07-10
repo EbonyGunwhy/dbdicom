@@ -344,8 +344,22 @@ def format_value(value, VR=None, tag=None):
             #return value[:64]
     if VR == 'TM':
         return variables.seconds_to_str(value)
+    if VR == 'DA':
+        if not is_valid_dicom_date(value):
+            return '99991231'
     
     return value
+
+
+
+def is_valid_dicom_date(da_str: str) -> bool:
+    if not isinstance(da_str, str) or len(da_str) != 8 or not da_str.isdigit():
+        return False
+    try:
+        datetime.strptime(da_str, "%Y%m%d")
+        return True
+    except ValueError:
+        return False
 
 
 def check_value(value, tag):

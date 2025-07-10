@@ -198,7 +198,7 @@ def move(from_entity:list, to_entity:list):
     dbd.delete(from_entity)
     dbd.close()
 
-def split_series(series:list, attr:Union[str, tuple], key=None)->dict:
+def split_series(series:list, attr:Union[str, tuple], key=None)->list:
     """
     Split a series into multiple series
     
@@ -207,8 +207,8 @@ def split_series(series:list, attr:Union[str, tuple], key=None)->dict:
         attr (str or tuple): dicom attribute to split the series by. 
         key (function): split by by key(attr) 
     Returns:
-        dict: dictionary with keys the unique values found (ascending) 
-        and as values the series corresponding to that value.     
+        list: list of two-element tuples, where the first element is
+        is the value and the second element is the series corresponding to that value.      
     """
     dbd = open(series[0])
     split_series = dbd.split_series(series, attr, key)

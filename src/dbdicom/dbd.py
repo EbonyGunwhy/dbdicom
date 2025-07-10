@@ -3,6 +3,7 @@ from datetime import datetime
 import json
 from typing import Union
 import zipfile
+import re
 
 from tqdm import tqdm
 import numpy as np
@@ -651,7 +652,7 @@ class DataBaseDicom():
         self.delete(from_entity)
         return self
     
-    def split_series(self, series:list, attr:Union[str, tuple], key=None) -> dict:
+    def split_series(self, series:list, attr:Union[str, tuple], key=None) -> list:
         """
         Split a series into multiple series
         
@@ -660,31 +661,34 @@ class DataBaseDicom():
             attr (str or tuple): dicom attribute to split the series by. 
             key (function): split by by key(attr)
         Returns:
-            dict: dictionary with keys the unique values found (ascending) 
-            and as values the series corresponding to that value.         
+            list: list of two-element tuples, where the first element is
+            is the value and the second element is the series corresponding to that value.         
         """
 
         # Find all values of the attr and list files per value
         all_files = register.files(self.register, series)
-        files = {}
+        files = []
+        values = []
         for f in tqdm(all_files, desc=f'Reading {attr}'):
             ds = dbdataset.read_dataset(f)
             v = dbdataset.get_values(ds, attr)
             if key is not None:
                 v = key(v)
-            if v in files:
-                files[v].append(f)
+            if v in values:
+                index = values.index(v)
+                files[index].append(f)
             else:
-                files[v] = [f]
+                values.append(v)
+                files.append([f])
 
         # Copy the files for each value (sorted) to new series
-        values = sorted(list(files.keys()))
-        split_series = {}
-        for v in tqdm(values, desc='Writing new series'):
+        split_series = []
+        for index, v in tqdm(enumerate(values), desc='Writing new series'):
             series_desc = series[-1] if isinstance(series, str) else series[-1][0]
-            series_v = series[:3] + [f'{series_desc}_{attr}_{v}']
-            self._files_to_series(files[v], series_v)
-            split_series[v] = series_v
+            series_desc = clean_folder_name(f'{series_desc}_{attr}_{v}')
+            series_v = series[:3] + [(series_desc, 0)]
+            self._files_to_series(files[index], series_v)
+            split_series.append((v, series_v))
         return split_series
 
 
@@ -910,6 +914,29 @@ class DataBaseDicom():
                             f"in study {st['StudyDescription']} of patient {pt['PatientID']}."
                         )
 
+
+
+
+def clean_folder_name(name, replacement="", max_length=255):
+    # Strip leading/trailing whitespace
+    name = name.strip()
+
+    # Replace invalid characters (Windows, macOS, Linux-safe)
+    illegal_chars = r'[<>:"/\\|?*\[\]\x00-\x1F\x7F]'
+    name = re.sub(illegal_chars, replacement, name)
+
+    # Replace reserved Windows names
+    reserved = {
+        "CON", "PRN", "AUX", "NUL",
+        *(f"COM{i}" for i in range(1, 10)),
+        *(f"LPT{i}" for i in range(1, 10))
+    }
+    name_upper = name.upper().split(".")[0]  # Just base name
+    if name_upper in reserved:
+        name = f"{name}_folder"
+
+    # Truncate to max length (common max: 255 bytes)
+    return name[:max_length] or "folder"
 
 
 
