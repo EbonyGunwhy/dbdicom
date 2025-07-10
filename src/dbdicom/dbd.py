@@ -651,13 +651,14 @@ class DataBaseDicom():
         self.delete(from_entity)
         return self
     
-    def split_series(self, series:list, attr:Union[str, tuple]) -> dict:
+    def split_series(self, series:list, attr:Union[str, tuple], key=None) -> dict:
         """
         Split a series into multiple series
         
         Args:
             series (list): series to split.
             attr (str or tuple): dicom attribute to split the series by. 
+            key (function): split by by key(attr)
         Returns:
             dict: dictionary with keys the unique values found (ascending) 
             and as values the series corresponding to that value.         
@@ -669,6 +670,8 @@ class DataBaseDicom():
         for f in tqdm(all_files, desc=f'Reading {attr}'):
             ds = dbdataset.read_dataset(f)
             v = dbdataset.get_values(ds, attr)
+            if key is not None:
+                v = key(v)
             if v in files:
                 files[v].append(f)
             else:

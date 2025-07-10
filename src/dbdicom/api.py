@@ -198,19 +198,20 @@ def move(from_entity:list, to_entity:list):
     dbd.delete(from_entity)
     dbd.close()
 
-def split_series(series:list, attr:Union[str, tuple])->dict:
+def split_series(series:list, attr:Union[str, tuple], key=None)->dict:
     """
     Split a series into multiple series
     
     Args:
         series (list): series to split.
-        attr (str or tuple): dicom attribute to split the series by.  
+        attr (str or tuple): dicom attribute to split the series by. 
+        key (function): split by by key(attr) 
     Returns:
         dict: dictionary with keys the unique values found (ascending) 
         and as values the series corresponding to that value.     
     """
     dbd = open(series[0])
-    split_series = dbd.split_series(series, attr)
+    split_series = dbd.split_series(series, attr, key)
     dbd.close()
     return split_series
 
