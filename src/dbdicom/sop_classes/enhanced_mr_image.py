@@ -1,163 +1,218 @@
 # Coded version of DICOM file 'C:\Users\steve\Dropbox\Software\QIB-Sheffield\dbdicom\tests\data\MULTIFRAME\IM_0010'
 # Produced by pydicom codify utility script
-from datetime import datetime
-from datetime import timedelta
+
+import datetime
 
 import numpy as np
+import vreg
+
 import pydicom
-from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
+from pydicom.dataset import Dataset, FileMetaDataset
 from pydicom.sequence import Sequence
-from pydicom.uid import (
-    generate_uid,
-    MRImageStorage,
-    EnhancedMRImageStorage,
-    ExplicitVRLittleEndian
-)
+from pydicom.uid import ExplicitVRLittleEndian, generate_uid
+
+import dbdicom.utils.image as image_utils
+from dbdicom.utils.pydicom_dataset import set_values, get_values
 
 
-from dbdicom.utils import image
+def from_volume(vol:vreg.Volume3D):
+    """
+    Build an Enhanced MR Image DICOM dataset from N+3D array.
 
+    Parameters
+    ----------
+    vol: vreg Volume3D
 
-import numpy as np
-import pydicom
-from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
-from pydicom.sequence import Sequence
-from pydicom.uid import ExplicitVRLittleEndian, EnhancedMRImageStorage, generate_uid
-from datetime import datetime, timedelta
+    Returns
+    -------
+    pydicom dataset
+    """
 
+    # Flatten frames
+    frames = vol.values.reshape(vol.shape[:2] + (-1,))
+    geom = image_utils.dismantle_affine_matrix(vol.affine)
 
-def create_5d_enhanced_mr_dataset(
-    time_points=20, flip_angles=10, slices=4, rows=128, cols=192
-):
-    total_frames = time_points * flip_angles * slices
-    now = datetime.now()
+    # --- FileDataset ---
+    ds = Dataset()
 
-    # File Meta Info
-    file_meta = FileMetaDataset()
-    file_meta.MediaStorageSOPClassUID = EnhancedMRImageStorage
-    file_meta.MediaStorageSOPInstanceUID = generate_uid()
-    file_meta.ImplementationClassUID = generate_uid()
-    file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
-
-    # Create FileDataset
-    ds = FileDataset(
-        filename_or_obj=None,
-        dataset=Dataset(),
-        file_meta=file_meta,
-        preamble=b"\0" * 128,
-    )
+    # File Meta
+    ds.file_meta = FileMetaDataset()
+    ds.file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds.file_meta.MediaStorageSOPClassUID = "1.2.840.10008.5.1.4.1.1.4.1"  # Enhanced MR
 
     ds.is_little_endian = True
     ds.is_implicit_VR = False
+    ds.SOPClassUID = ds.file_meta.MediaStorageSOPClassUID
+    ds.SOPInstanceUID = generate_uid()
 
-    # Identification
-    ds.SOPClassUID = EnhancedMRImageStorage
-    ds.SOPInstanceUID = file_meta.MediaStorageSOPInstanceUID
-    ds.PatientName = "FiveD^Phantom"
-    ds.PatientID = "555555"
-    ds.StudyInstanceUID = generate_uid()
+    # Study/Series
     ds.SeriesInstanceUID = generate_uid()
-    ds.StudyDate = now.strftime("%Y%m%d")
-    ds.StudyTime = now.strftime("%H%M%S")
+    ds.StudyInstanceUID = generate_uid()
+    ds.FrameOfReferenceUID = generate_uid()
     ds.Modality = "MR"
-    ds.Manufacturer = "PythonPACS"
-    ds.StudyID = "1"
-    ds.SeriesNumber = "1"
-    ds.InstanceNumber = "1"
+    ds.PatientName = "Test^Patient"
+    ds.PatientID = "123456"
+    ds.StudyDate = datetime.date.today().strftime("%Y%m%d")
+    ds.StudyTime = datetime.datetime.now().strftime("%H%M%S")
 
-    # Image Dimensions
-    ds.Rows = rows
-    ds.Columns = cols
-    ds.NumberOfFrames = str(total_frames)
+    # Image attributes
+    ds.Columns = vol.shape[0]
+    ds.Rows = vol.shape[1]
+    ds.NumberOfFrames = np.prod(vol.shape[2:])
     ds.SamplesPerPixel = 1
     ds.PhotometricInterpretation = "MONOCHROME2"
     ds.BitsAllocated = 16
-    ds.BitsStored = 12
-    ds.HighBit = 11
-    ds.PixelRepresentation = 0
-    ds.PixelSpacing = [1.0, 1.0]
-    ds.SliceThickness = 1.0
-    ds.FrameOfReferenceUID = generate_uid()
+    ds.BitsStored = 16
+    ds.HighBit = 15
+    ds.PixelRepresentation = 1
+    ds.PixelSpacing = list(vol.spacing[:2])
+    ds.SliceThickness = vol.spacing[2]
 
-    # Dummy pixel data
-    pixel_array = np.zeros((total_frames, rows, cols), dtype=np.uint16)
-    ds.PixelData = pixel_array.tobytes()
+    # Dimensions
+    ds.DimensionOrganizationSequence = Sequence([Dataset()])
+    ds.DimensionOrganizationSequence[0].DimensionOrganizationUID = generate_uid()
+    ds.DimensionIndexSequence = Sequence()
+    for axis in ['SliceLocation'] + vol.dims:
+        axis_dimension_item = Dataset()
+        axis_dimension_item.DimensionIndexPointer = pydicom.tag.Tag(axis)  
+        axis_dimension_item.DimensionDescriptionLabel = axis
+        ds.DimensionIndexSequence.append(axis_dimension_item)
 
     # Shared Functional Groups
-    shared_fg = Dataset()
-    pix_meas = Dataset()
-    pix_meas.PixelSpacing = ds.PixelSpacing
-    pix_meas.SliceThickness = ds.SliceThickness
-    shared_fg.PixelMeasuresSequence = [pix_meas]
-    ds.SharedFunctionalGroupsSequence = [shared_fg]
+    ds.SharedFunctionalGroupsSequence = [Dataset()]
+    ds.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence = [Dataset()]
+    ds.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].PixelSpacing = ds.PixelSpacing
+    ds.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].SliceThickness = ds.SliceThickness
+    ds.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0].SpacingBetweenSlices = ds.SliceThickness
+    ds.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence = [Dataset()]
+    ds.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence[0].ImageOrientationPatient = geom['ImageOrientationPatient']
 
-    # Dimension Organization
-    dim_org_uid = generate_uid()
-    ds.DimensionOrganizationSequence = Sequence([
-        Dataset()
-    ])
-    ds.DimensionOrganizationSequence[0].DimensionOrganizationUID = dim_org_uid
+    # Per-frame Functional Groups
+    PerFrameFunctionalGroupsSequence = []
 
-    ds.DimensionIndexSequence = Sequence()
+    for flat_index in range(frames.shape[-1]):
+        frame_ds = Dataset()
+        vol_idx, slice_idx = divmod(flat_index, vol.shape[2])
+        indices = np.unravel_index(vol_idx, vol.shape[3:])
+        dim_values = [i + 1 for i in indices]
 
-    # Time dimension
-    temporal = Dataset()
-    temporal.DimensionOrganizationUID = dim_org_uid
-    temporal.DimensionIndexPointer = 0x00209164  # TemporalPositionIndex
-    temporal.FunctionalGroupPointer = 0x00209113  # TemporalPositionSequence
-    ds.DimensionIndexSequence.append(temporal)
+        # Frame content
+        frame_ds.FrameContentSequence = [Dataset()]
+        frame_ds.FrameContentSequence[0].DimensionIndexValues = dim_values
 
-    # Flip angle dimension
-    flip = Dataset()
-    flip.DimensionOrganizationUID = dim_org_uid
-    flip.DimensionIndexPointer = 0x00181314  # FlipAngle
-    flip.FunctionalGroupPointer = 0x00189105  # MRImagingModifierSequence
-    ds.DimensionIndexSequence.append(flip)
+        # Plane position
+        frame_ds.PlanePositionSequence = [Dataset()]
+        frame_ds.PlanePositionSequence[0].ImagePositionPatient = list(np.array(geom['ImagePositionPatient']) + slice_idx * vol.spacing[2] * np.array(geom['slice_cosine']))
 
-    # Slice position
-    slice_dim = Dataset()
-    slice_dim.DimensionOrganizationUID = dim_org_uid
-    slice_dim.DimensionIndexPointer = 0x00200032  # ImagePositionPatient
-    slice_dim.FunctionalGroupPointer = 0x00209113  # PlanePositionSequence
-    ds.DimensionIndexSequence.append(slice_dim)
+        # Plane orientation
+        frame_ds.PlaneOrientationSequence = [Dataset()]
+        frame_ds.PlaneOrientationSequence[0].ImageOrientationPatient = geom['ImageOrientationPatient']
 
-    # Per-Frame Functional Groups
-    per_frame_seq = []
+        # Assign parameters using dims as DICOM keywords
+        for ax_i, axis in enumerate(vol.dims):
+            val = vol.coords[(ax_i,) + tuple(indices)]
 
-    base_time = now
-    flip_angle_values = np.linspace(5, 50, flip_angles)  # Example flip angles
+            sequence, attr = axis.split("/")
+            if not hasattr(frame_ds, sequence):
+                setattr(frame_ds, sequence, [Dataset()])
+            sequence_ds = getattr(frame_ds, sequence)[0]
+            set_values(sequence_ds, attr, val)
 
-    for t in range(time_points):
-        for f in range(flip_angles):
-            for z in range(slices):
-                frame = Dataset()
+        # Frame anatomy & type
+        frame_ds.FrameAnatomySequence = [Dataset()]
+        frame_ds.FrameAnatomySequence[0].AnatomicRegionSequence = [Dataset()]
+        frame_ds.FrameAnatomySequence[0].AnatomicRegionSequence[0].CodeValue = "12738006"
+        frame_ds.FrameAnatomySequence[0].AnatomicRegionSequence[0].CodingSchemeDesignator = "SCT"
+        frame_ds.FrameAnatomySequence[0].AnatomicRegionSequence[0].CodeMeaning = "Brain"
 
-                # Frame content
-                fc = Dataset()
-                fc.FrameAcquisitionNumber = len(per_frame_seq)
-                fc.AcquisitionTime = (base_time + timedelta(seconds=t)).strftime("%H%M%S.%f")[:13]
-                frame.FrameContentSequence = [fc]
+        frame_ds.MRImageFrameTypeSequence = [Dataset()]
+        frame_ds.MRImageFrameTypeSequence[0].FrameType = ["ORIGINAL", "PRIMARY", "M", "NONE"]
 
-                # Temporal position
-                tp = Dataset()
-                tp.TemporalPositionIndex = t + 1
-                frame.TemporalPositionSequence = [tp]
+        # Acquisition datetime
+        frame_ds.FrameAcquisitionDateTime = (
+            datetime.datetime.now() + datetime.timedelta(seconds=flat_index)
+        ).strftime("%Y%m%d%H%M%S.%f")
 
-                # Flip angle
-                fa = Dataset()
-                fa.FlipAngle = float(flip_angle_values[f])
-                frame.MRImagingModifierSequence = [fa]
+        PerFrameFunctionalGroupsSequence.append(frame_ds)
 
-                # Slice position
-                pos = Dataset()
-                pos.ImagePositionPatient = [0.0, 0.0, float(z)]
-                frame.PlanePositionSequence = [pos]
+    ds.PerFrameFunctionalGroupsSequence = PerFrameFunctionalGroupsSequence
 
-                per_frame_seq.append(frame)
-
-    ds.PerFrameFunctionalGroupsSequence = Sequence(per_frame_seq)
+    # Pixel Data
+    ds.PixelData = b"".join([f.tobytes() for f in frames])
 
     return ds
+
+
+
+# THIS NEEDS DEBUGGING
+def to_volume(ds):
+    """
+    Write an Enhanced MR Image DICOM from N+3D array.
+
+    Parameters
+    ----------
+    ds: pydicom Dataset
+    
+    Returns
+    -------
+    vreg Volume3D
+    """
+    values = pixel_data(ds).T # need reshape
+    dims = [item.DimensionDescriptionLabel 
+            for item in ds.DimensionIndexSequence[1:]] # handle slice location
+    affine = image_utils.affine_matrix(
+        get_values(ds.SharedFunctionalGroupsSequence[0].PlaneOrientationSequence[0], 'ImageOrientationPatient'),
+        get_values(ds.SharedFunctionalGroupsSequence[0].PlanePositionSequence[0], 'ImagePositionPatient'),
+        get_values(ds.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0], 'PixelSpacing'),
+        get_values(ds.SharedFunctionalGroupsSequence[0].PixelMeasuresSequence[0], 'SliceThickness'), # derive from slice_loc in per-frame
+    )
+    coords = np.zeros((len(dims), ds.NumberOfFrames))
+    for d, dim in enumerate(dims):
+        for flat_index in range(ds.NumberOfFrames):
+            found_val = False
+            frame_ds = ds.PerFrameFunctionalGroupsSequence[flat_index]        
+            for sequence in frame_ds:
+                if hasattr(sequence[0], dim):
+                    coords[d, flat_index] = get_values(sequence[0], dim)
+                    found_val=True
+                    break
+            if not found_val:
+                raise ValueError(f"Dimension {dim} not found in frame {flat_index}")
+    shape = [len(np.unique(coords[d,:])) for d in range(len(dims))]
+    if np.prod(shape) == ds.NumberOfFrames:
+        values = values.reshape(values.shape[:2] + tuple(shape))
+    else:
+        values = values.reshape(values.shape[:2] + (1, ds.NumberOfFrames) )
+
+    return vreg.volume(values, affine, coords, dims)
+
+
+
+
+def pixel_data(ds):
+    """Read the pixel array from an MR image"""
+
+    array = ds.pixel_array
+    array = array.astype(np.float32)
+    if [0x2005, 0x100E] in ds: # 'Philips Rescale Slope'
+        slope = ds[(0x2005, 0x100E)].value
+        intercept = ds[(0x2005, 0x100D)].value
+        if (intercept == 0) and (slope == 1): 
+            array = array.astype(np.int16)
+        else:
+            array = array.astype(np.float32)
+            array -= intercept
+            array /= slope
+    else:
+        slope = float(getattr(ds, 'RescaleSlope', 1)) 
+        intercept = float(getattr(ds, 'RescaleIntercept', 0)) 
+        if (intercept == 0) and (slope == 1): 
+            array = array.astype(np.int16)
+        else:
+            array = array.astype(np.float32)
+            array *= slope
+            array += intercept
+    return np.transpose(array)
 
 
 
@@ -624,139 +679,3 @@ def ukrin_maps_per_frame_functional_group():
 
     return ds
 
-def get_window(ds):
-    """Centre and width of the pixel data after applying rescale slope and intercept.
-    
-    In this case retrieve the centre and width values of the first frame
-    NOT In USE
-    """
-
-    centre = ds.PerFrameFunctionalGroupsSequence[0].FrameVOILUTSequence[0].WindowCenter 
-    width = ds.PerFrameFunctionalGroupsSequence[0].FrameVOILUTSequence[0].WindowWidth
-    if centre is None or width is None:
-        array = ds.get_pixel_array()
-    if centre is None: 
-        centre = np.median(array)
-    if width is None: 
-        p = np.percentile(array, [25, 75])
-        width = p[1] - p[0]
-    
-    return centre, width
-
-def get_pixel_array(ds):
-
-    array = ds.pixel_array.astype(np.float32)
-    frames = ds.PerFrameFunctionalGroupsSequence
-    for index, frame in enumerate(frames):
-        slice = np.squeeze(array[index, ...])
-        if [0x2005, 0x100E] in ds: # 'Philips Rescale Slope'
-            slope = ds[(0x2005, 0x100E)].value
-            intercept = ds[(0x2005, 0x100D)].value
-            slice = (slice - intercept) / slope
-        else:
-            transform = frame.PixelValueTransformationSequence[0]
-            slope = float(getattr(transform, 'RescaleSlope', 1)) 
-            intercept = float(getattr(transform, 'RescaleIntercept', 0)) 
-            slice = slice * slope + intercept
-        array[index, ...] = np.transpose(slice)
-    
-    return array
-
-
-def set_pixel_array(ds, array, value_range=None):
-
-    if (0x2005, 0x100E) in ds: 
-        del ds[0x2005, 0x100E]  # Delete 'Philips Rescale Slope'
-    if (0x2005, 0x100D) in ds: 
-        del ds[0x2005, 0x100D]
-
-    array = image.clip(array, value_range=value_range)
-    array, slope, intercept = image.scale_to_range(array, ds.BitsAllocated)
-    array = np.transpose(array, (0, 2, 1))
-
-    maximum = np.amax(array)
-    minimum = np.amin(array)
-    shape = np.shape(array)
-
-    ds.NumberOfFrames = np.shape(array)[0]
-    del ds.PerFrameFunctionalGroupsSequence[ds.NumberOfFrames:]
-
-    ds.PixelRepresentation = 0
-    ds.SmallestImagePixelValue = int(maximum)
-    ds.LargestImagePixelValue = int(minimum)
-    ds.RescaleSlope = 1 / slope
-    ds.RescaleIntercept = - intercept / slope
-    ds.WindowCenter = (maximum + minimum) / 2
-    ds.WindowWidth = maximum - minimum
-    ds.Rows = shape[0]
-    ds.Columns = shape[1]
-    ds.PixelData = array.tobytes()
-
-
-def image_type(ds):
-    """Determine if a dataset is Magnitude, Phase, Real or Imaginary"""
-
-    image_type = []
-    for slice in ds.PerFrameFunctionalGroupsSequence:
-        sequence = slice.MRImageFrameTypeSequence[0]
-
-        if hasattr(sequence, 'FrameType'):
-            type = set(sequence.FrameType)
-            if set(['M', 'MAGNITUDE']).intersection(type):
-                image_type.append('MAGNITUDE')
-            elif set(['P', 'PHASE']).intersection(type):
-                image_type.append('PHASE')
-            elif set(['R', 'REAL']).intersection(type):
-                image_type.append('REAL')
-            elif set(['I', 'IMAGINARY']).intersection(type):
-                image_type.append('IMAGINARY')
-        elif hasattr(sequence, 'ComplexImageComponent'):
-            type = set(sequence.ComplexImageComponent)
-            if set(['M', 'MAGNITUDE']).intersection(type):
-                image_type.append('MAGNITUDE')
-            elif set(['P', 'PHASE']).intersection(type):
-                image_type.append('PHASE')
-            elif set(['R', 'REAL']).intersection(type):
-                image_type.append('REAL')
-            elif set(['I', 'IMAGINARY']).intersection(type):
-                image_type.append('IMAGINARY')
-        else:
-            image_type.append('UNKNOWN')
-
-    return image_type
-
-
-def signal_type(ds):
-    """Determine if an image is Water, Fat, In-Phase, Out-phase image or None"""
-
-    signal_type = []
-    for slice in ds.PerFrameFunctionalGroupsSequence:
-        sequence = slice.MRImageFrameTypeSequence[0]
-
-        if hasattr(sequence, 'FrameType'):
-            type = set(sequence.FrameType)
-            if set(['W', 'WATER']).intersection(type):
-                signal_type.append('WATER')
-            elif set(['F', 'FAT']).intersection(type):
-                signal_type.append('FAT')
-            elif set(['IP', 'IN_PHASE']).intersection(type):
-                signal_type.append('IN-PHASE')
-            elif set(['OP', 'OUT_PHASE']).intersection(type):
-                signal_type.append('OP-PHASE')
-        else:
-            signal_type.append('UNKNOWN')
-
-    return signal_type
-
-def get_affine_matrix(ds):
-    """Affine transformation matrix for all images in a multiframe image"""
-
-    affineList = []
-    for frame in ds.PerFrameFunctionalGroupsSequence:
-        affine = image.affine_matrix(
-            frame.PlaneOrientationSequence[0].ImageOrientationPatient, 
-            frame.PlanePositionSequence[0].ImagePositionPatient, 
-            frame.PixelMeasuresSequence[0].PixelSpacing, 
-            frame.PixelMeasuresSequence[0].SliceThickness)
-        affineList.append(affine)
-    return np.squeeze(np.array(affineList))

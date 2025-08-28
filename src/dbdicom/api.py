@@ -216,12 +216,13 @@ def split_series(series:list, attr:Union[str, tuple], key=None)->list:
     return split_series
 
 
-def volume(entity:Union[list, str], dims:list=None) -> Union[vreg.Volume3D, list]:
+def volume(entity:Union[list, str], dims:list=None, verbose=1) -> Union[vreg.Volume3D, list]:
     """Read volume or volumes.
 
     Args:
         entity (list, str): DICOM entity to read
         dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+        verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
 
     Returns:
         vreg.Volume3D | list: If the entity is a series this returns 
@@ -230,7 +231,7 @@ def volume(entity:Union[list, str], dims:list=None) -> Union[vreg.Volume3D, list
     if isinstance(entity, str):
         entity = [entity]
     dbd = open(entity[0])
-    vol = dbd.volume(entity, dims)
+    vol = dbd.volume(entity, dims, verbose)
     dbd.close()
     return vol
 
@@ -246,7 +247,7 @@ def write_volume(vol:Union[vreg.Volume3D, tuple], series:list, ref:list=None):
     dbd.write_volume(vol, series, ref)
     dbd.close()
 
-def to_nifti(series:list, file:str, dims:list=None):
+def to_nifti(series:list, file:str, dims:list=None, verbose=1):
     """Save a DICOM series in nifti format.
 
     Args:
@@ -254,9 +255,10 @@ def to_nifti(series:list, file:str, dims:list=None):
         file (str): file path of the nifti file.
         dims (list, optional): Non-spatial dimensions of the volume. 
             Defaults to None.
+        verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
     """
     dbd = open(series[0])
-    dbd.to_nifti(series, file, dims)
+    dbd.to_nifti(series, file, dims, verbose)
     dbd.close()
 
 def from_nifti(file:str, series:list, ref:list=None):

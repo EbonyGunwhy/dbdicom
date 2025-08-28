@@ -10,13 +10,23 @@ os.makedirs(tmp, exist_ok=True)
 
 
 def test_write_volume():
+
     values = 100*np.random.rand(128, 192, 20).astype(np.float32)
     vol = vreg.volume(values)
     series = [tmp, '007', 'dbdicom_test', 'ax']
     db.write_volume(vol, series)
+
+    values = np.zeros((256, 256, 16, 2))
+    affine = np.eye(4)
+    vol = vreg.volume(values, affine, coords=(['INPHASE', 'OUTPHASE'], ), dims=['ImageType'])
+    series = [tmp, '007', 'dbdicom_test', 'dixon']
+    db.write_volume(vol, series)
+
     shutil.rmtree(tmp)
 
+
 def test_volume():
+
     values = 100*np.random.rand(128, 192, 20).astype(np.float32)
     vol = vreg.volume(values)
     series = [tmp, '007', 'test', 'ax']
@@ -24,6 +34,28 @@ def test_volume():
     vol2 = db.volume(series)
     assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
     assert np.linalg.norm(vol2.affine-vol.affine) == 0
+
+    values = 100*np.random.rand(256, 256, 3, 2).astype(np.float32)
+    vol = vreg.volume(values, dims=['ImageType'], coords=(['INPHASE', 'OUTPHASE'], ), orient='coronal')
+    series = [tmp, '007', 'dbdicom_test', 'dixon']
+    db.write_volume(vol, series)
+    vol2 = db.volume(series, dims=['ImageType'])
+    assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
+    assert np.linalg.norm(vol2.affine-vol.affine) == 0
+    assert vol2.dims == vol.dims
+    assert np.array_equal(vol2.coords, vol.coords)
+
+    values = 100*np.random.rand(256, 256, 3, 2, 2).astype(np.float32)
+    dims=['FlipAngle','ImageType']
+    vol = vreg.volume(values, dims=dims, coords=([10, 20], ['INPHASE', 'OUTPHASE']), orient='coronal')
+    series = [tmp, '007', 'dbdicom_test', 'vfa_dixon']
+    db.write_volume(vol, series)
+    vol2 = db.volume(series, dims=dims)
+    assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
+    assert np.linalg.norm(vol2.affine-vol.affine) == 0
+    assert vol2.dims == vol.dims
+    assert np.array_equal(vol2.coords, vol.coords)
+
     shutil.rmtree(tmp)
 
 def test_write_database():

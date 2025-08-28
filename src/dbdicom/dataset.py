@@ -2,19 +2,18 @@
 # https://www.aliza-dicom-viewer.com/download/datasets
 
 import os
-from datetime import datetime
 import struct
 from tqdm import tqdm
 
 import numpy as np
 import pydicom
 from pydicom.util.codify import code_file
+from pydicom.tag import Tag
 import pydicom.config
 import vreg
 
-
+from dbdicom.utils.pydicom_dataset import get_values, set_values
 import dbdicom.utils.image as image
-import dbdicom.utils.variables as variables
 from dbdicom.sop_classes import (
     xray_angiographic_image,
     ct_image,
@@ -50,15 +49,15 @@ SOPCLASSMODULE = {
 }
 
 
-def read_dataset(file):
+# def read_dataset(file):
 
-    try:
-        ds = pydicom.dcmread(file)
-        # ds = pydicom.dcmread(file, force=True) # more robust but hides corrupted data
-    except Exception:
-        raise FileNotFoundError('File not found')
+#     try:
+#         ds = pydicom.dcmread(file)
+#         # ds = pydicom.dcmread(file, force=True) # more robust but hides corrupted data
+#     except Exception:
+#         raise FileNotFoundError('File not found')
     
-    return ds
+#     return ds
 
 
 def new_dataset(sop_class):
@@ -79,149 +78,6 @@ def new_dataset(sop_class):
         raise ValueError(
             f"DICOM class {sop_class} is not currently supported"
         )
-
-
-
-def get_values(ds, tags):
-    """Return a list of values for a dataset"""
-
-    # https://pydicom.github.io/pydicom/stable/guides/element_value_types.html
-    if np.isscalar(tags): 
-        return get_values(ds, [tags])[0]
-            
-    row = []  
-    for tag in tags:
-        value = None
-
-        # If the tag is provided as string
-        if isinstance(tag, str):
-            if hasattr(ds, tag):
-                pydcm_value = ds[tag].value
-                try:
-                    VR = pydicom.datadict.dictionary_VR(tag)
-                except:
-                    VR = None
-                value = to_set_type(pydcm_value, VR) # ELIMINATE THIS STEP - return pydicom datatypes
-
-        # If the tag is a tuple of hexadecimal values
-        else: 
-            if tag in ds:
-                try:
-                    VR = pydicom.datadict.dictionary_VR(tag)
-                except:
-                    VR = None
-                value = to_set_type(ds[tag].value, VR)
-
-        # If a tag is not present in the dataset, check if it can be derived
-        if value is None:
-            value = derive_data_element(ds, tag)
-
-        row.append(value)
-    return row
-
-
-def set_values(ds, tags, values, VR=None, coords=None):
-
-    if np.isscalar(tags): 
-        tags = [tags]
-        values = [values]
-        VR = [VR]
-    elif VR is None:
-        VR = [None] * len(tags)
-
-    if coords is not None:
-        tags += list(coords.keys())
-        values += list(coords.values())
-
-    for i, tag in enumerate(tags):
-                
-        if values[i] is None:
-            if isinstance(tag, str):
-                if hasattr(ds, tag):
-                    del ds[tag]
-            else: # hexadecimal tuple
-                if tag in ds:
-                    del ds[tag]
-
-        elif isinstance(tag, str):
-            if hasattr(ds, tag):
-                ds[tag].value = format_value(values[i], tag=tag)
-            else:
-                _add_new(ds, tag, values[i], VR=VR[i])
-
-        else: # hexadecimal tuple
-            if tag in ds:
-                ds[tag].value = format_value(values[i], tag=tag)
-            else:
-                _add_new(ds, tag, values[i], VR=VR[i])
-
-        #_set_derived_data_element(ds, tag, values[i])
-                
-    return ds
-
-
-
-def value(ds, tags):
-    # Same as get_values but without VR lookup
-
-    # https://pydicom.github.io/pydicom/stable/guides/element_value_types.html
-    if np.isscalar(tags): 
-        return get_values(ds, [tags])[0]
-            
-    row = []  
-    for tag in tags:
-        value = None
-
-        # If the tag is provided as string
-        if isinstance(tag, str):
-
-            if hasattr(ds, tag):
-                value = to_set_type(ds[tag].value)
-
-        # If the tag is a tuple of hexadecimal values
-        else: 
-            if tag in ds:
-                value = to_set_type(ds[tag].value)
-
-        # If a tag is not present in the dataset, check if it can be derived
-        if value is None:
-            value = derive_data_element(ds, tag)
-
-        row.append(value)
-    return row
-
-
-def set_value(ds, tags, values):
-    # Same as set_values but without VR lookup
-    # This excludes new private tags - set those using add_private()
-    if np.isscalar(tags): 
-        tags = [tags]
-        values = [values]
-
-    for i, tag in enumerate(tags):
-                
-        if values[i] is None:
-            if isinstance(tag, str):
-                if hasattr(ds, tag):
-                    del ds[tag]
-            else: # hexadecimal tuple
-                if tag in ds:
-                    del ds[tag]
-
-        elif isinstance(tag, str):
-            if hasattr(ds, tag):
-                ds[tag].value = check_value(values[i], tag)
-            else:
-                add_new(ds, tag, values[i])
-
-        else: # hexadecimal tuple
-            if tag in ds:
-                ds[tag].value = check_value(values[i], tag)
-            else:
-                add_new(ds, tag, values[i])
-                
-    return ds
-
 
 
 def write(ds, file, status=None):
@@ -268,164 +124,12 @@ def read_data(files, tags, path=None, images_only=False): # obsolete??
 
 
 
-
-def _add_new(ds, tag, value, VR='OW'):
-    if not isinstance(tag, pydicom.tag.BaseTag):
-        tag = pydicom.tag.Tag(tag)
-    if not tag.is_private: # Add a new data element
-        value_repr = pydicom.datadict.dictionary_VR(tag)
-        if value_repr == 'US or SS':
-            if value >= 0:
-                value_repr = 'US'
-            else:
-                value_repr = 'SS'
-        elif value_repr == 'OB or OW':
-            value_repr = 'OW'
-        ds.add_new(tag, value_repr, format_value(value, value_repr))
-    else:
-        if (tag.group, 0x0010) not in ds:
-            ds.private_block(tag.group, 'dbdicom ' + str(tag.group), create=True)
-        ds.add_new(tag, VR, format_value(value, VR))
-
-
-def add_new(ds, tag, value):
-    if not isinstance(tag, pydicom.tag.BaseTag):
-        tag = pydicom.tag.Tag(tag)
-    if tag.is_private:
-        raise ValueError("if you want to add a private data element, use "
-                         "dataset.add_private()")
-   # Add a new data element
-    value_repr = pydicom.datadict.dictionary_VR(tag)
-    if value_repr == 'US or SS':
-        if value >= 0:
-            value_repr = 'US'
-        else:
-            value_repr = 'SS'
-    elif value_repr == 'OB or OW':
-        value_repr = 'OW'
-    ds.add_new(tag, value_repr, format_value(value, value_repr))
-
-
-
-def add_private(ds, tag, value, VR):
-    if not isinstance(tag, pydicom.tag.BaseTag):
-        tag = pydicom.tag.Tag(tag)
-    if (tag.group, 0x0010) not in ds:
-        ds.private_block(tag.group, 'dbdicom ' + str(tag.group), create=True)
-    ds.add_new(tag, VR, format_value(value, VR))
-
-
-def derive_data_element(ds, tag):
-    """Tags that are not required but can be derived from other required tags"""
-
-    if tag == 'SliceLocation' or tag == (0x0020, 0x1041):
-        if 'ImageOrientationPatient' in ds and 'ImagePositionPatient' in ds:
-            return image.slice_location(
-                ds['ImageOrientationPatient'].value, 
-                ds['ImagePositionPatient'].value,
-            )
-    # To be extended ad hoc with other tags that can be derived
-
-
-
-def format_value(value, VR=None, tag=None):
-
-    # If the change below is made (TM, DA, DT) then this needs to 
-    # convert those to string before setting
-
-    # Slow - dictionary lookup for every value write
-
-    if VR is None:
-        VR = pydicom.datadict.dictionary_VR(tag)
-
-    if VR == 'LO':
-        if len(value) > 64:
-            return value[-64:]
-            #return value[:64]
-    if VR == 'TM':
-        return variables.seconds_to_str(value)
-    if VR == 'DA':
-        if not is_valid_dicom_date(value):
-            return '99991231'
+# def new_uid(n=None):
     
-    return value
-
-
-
-def is_valid_dicom_date(da_str: str) -> bool:
-    if not isinstance(da_str, str) or len(da_str) != 8 or not da_str.isdigit():
-        return False
-    try:
-        datetime.strptime(da_str, "%Y%m%d")
-        return True
-    except ValueError:
-        return False
-
-
-def check_value(value, tag):
-
-    # If the change below is made (TM, DA, DT) then this needs to 
-    # convert those to string before setting
-
-    LO = [
-        'SeriesDescription',
-        'StudyDescription',
-    ]
-    TM = [
-        'AcquisitionTime',
-    ]
-
-    if tag in LO:
-        if len(value) > 64:
-            return value[-64:]
-    if tag in TM:
-        return variables.seconds_to_str(value)
-    
-    return value
-
-
-def to_set_type(value, VR=None):
-    """
-    Convert pydicom datatypes to the python datatypes used to set the parameter.
-    """
-    # Not a good idea to modify pydicom set/get values. confusing and requires extra VR lookups
-
-    if VR == 'TM':
-        # pydicom sometimes returns string values for TM data types
-        if isinstance(value, str):
-            return variables.str_to_seconds(value)
-
-    if value.__class__.__name__ == 'MultiValue':
-        return [to_set_type(v, VR) for v in value]
-    if value.__class__.__name__ == 'PersonName':
-        return str(value)
-    if value.__class__.__name__ == 'Sequence':
-        return [ds for ds in value]
-    if value.__class__.__name__ == 'TM': 
-        return variables.time_to_seconds(value) # return datetime.time
-    if value.__class__.__name__ == 'UID': 
-        return str(value) 
-    if value.__class__.__name__ == 'IS': 
-        return int(value)
-    if value.__class__.__name__ == 'DT': 
-        return variables.datetime_to_str(value) # return datetime.datetime
-    if value.__class__.__name__ == 'DA':  # return datetime.date
-        return variables.date_to_str(value)
-    if value.__class__.__name__ == 'DSfloat': 
-        return float(value)
-    if value.__class__.__name__ == 'DSdecimal': 
-        return int(value)
-    
-    return value
-
-
-def new_uid(n=None):
-    
-    if n is None:
-        return pydicom.uid.generate_uid()
-    else:
-        return [pydicom.uid.generate_uid() for _ in range(n)]
-
+#     if n is None:
+#         return pydicom.uid.generate_uid()
+#     else:
+#         return [pydicom.uid.generate_uid() for _ in range(n)]
 
 
 
@@ -638,6 +342,15 @@ def set_pixel_data(ds, array):
 def volume(ds):
     return vreg.volume(pixel_data(ds), affine(ds))
 
+
+
+def is_valid_dicom_tag(value):
+    try:
+        tag = Tag(value)
+        return pydicom.datadict.dictionary_keyword(tag) != ''
+    except Exception:
+        return False
+
 def set_volume(ds, volume:vreg.Volume3D):
     if volume is None:
         raise ValueError('The volume cannot be set to an empty value.')
@@ -659,15 +372,16 @@ def set_volume(ds, volume:vreg.Volume3D):
         # All other dimensions should have size 1
         coords = volume.coords.reshape((volume.coords.shape[0], -1))
         for i, d in enumerate(volume.dims):
-            try:
-                set_values(ds, d, coords[i,0])
-            except KeyError:
+            if not is_valid_dicom_tag(d):
                 raise ValueError(
                     "Cannot write volume to DICOM. "
                     f"Volume dimension {d} is not a recognized DICOM data-element. "
-                    f"Use Volume3D.set_dims() with proper DICOM keywords "
-                    "or (group, element) tags to change the dimensions."
+                    f"Use Volume3D.set_dims() with proper DICOM "
+                    "tags to change the dimensions."
                 )
+            else:
+                set_values(ds, d, coords[i,0])
+
 
 
 def image_type(ds):

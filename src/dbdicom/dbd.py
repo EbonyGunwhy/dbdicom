@@ -1,5 +1,4 @@
 import os
-from datetime import datetime
 import json
 from typing import Union
 import zipfile
@@ -9,12 +8,18 @@ from tqdm import tqdm
 import numpy as np
 import vreg
 from pydicom.dataset import Dataset
+import pydicom
 
 import dbdicom.utils.arrays
 import dbdicom.dataset as dbdataset
 import dbdicom.database as dbdatabase
 import dbdicom.register as register
 import dbdicom.const as const
+from dbdicom.utils.pydicom_dataset import (
+    get_values, 
+    set_values,
+    set_value,
+    )
 
 
 
@@ -201,12 +206,13 @@ class DataBaseDicom():
             return register.series(self.register, entity, desc, contains, isin)
 
 
-    def volume(self, entity:Union[list, str], dims:list=None) -> Union[vreg.Volume3D, list]:
+    def volume(self, entity:Union[list, str], dims:list=None, verbose=1) -> Union[vreg.Volume3D, list]:
         """Read volume or volumes.
 
         Args:
             entity (list, str): DICOM entity to read
             dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+            verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
 
         Returns:
             vreg.Volume3D | list: If the entity is a series this returns 
@@ -229,12 +235,14 @@ class DataBaseDicom():
         # Read dicom files
         values = []
         volumes = []
-        for f in tqdm(files, desc='Reading volume..'):
-            ds = dbdataset.read_dataset(f)
-            values.append(dbdataset.get_values(ds, dims))
+        for f in tqdm(files, desc='Reading volume..', disable=(verbose==0)):
+            ds = pydicom.dcmread(f)
+            values.append(get_values(ds, dims))
             volumes.append(dbdataset.volume(ds))
 
         # Format as mesh
+        # coords = np.stack(values, axis=-1, dtype=object) 
+        values = [np.array(v, dtype=object) for v in values] # object array to allow for mixed types
         coords = np.stack(values, axis=-1)
         coords, inds = dbdicom.utils.arrays.meshvals(coords)
         vols = np.array(volumes)
@@ -292,7 +300,7 @@ class DataBaseDicom():
                 ref_mgr = DataBaseDicom(ref[0])
             files = register.files(ref_mgr.register, ref)
             ref_mgr.close()
-            ds = dbdataset.read_dataset(files[0]) 
+            ds = pydicom.dcmread(files[0]) 
 
         # Get the attributes of the destination series
         attr = self._series_attributes(series)
@@ -307,15 +315,17 @@ class DataBaseDicom():
             i=0
             vols = vol.separate().reshape(-1)
             for vt in tqdm(vols, desc='Writing volume..'):
-                for sl in vt.split():
+                slices = vt.split()
+                for sl in slices:
                     dbdataset.set_volume(ds, sl)
-                    dbdataset.set_value(ds, sl.dims, sl.coords[:,...])
+                    sl_coords = [sl.coords[i,...].ravel()[0] for i in range(len(sl.dims))]
+                    set_value(ds, sl.dims, sl_coords)
                     self._write_dataset(ds, attr, n + 1 + i)
                     i+=1
         return self
 
 
-    def to_nifti(self, series:list, file:str, dims=None):
+    def to_nifti(self, series:list, file:str, dims=None, verbose=1):
         """Save a DICOM series in nifti format.
 
         Args:
@@ -323,8 +333,10 @@ class DataBaseDicom():
             file (str): file path of the nifti file.
             dims (list, optional): Non-spatial dimensions of the volume. 
                 Defaults to None.
+            verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
+            
         """
-        vol = self.volume(series, dims)
+        vol = self.volume(series, dims, verbose)
         vreg.write_nifti(vol, file)
         return self
 
@@ -390,12 +402,12 @@ class DataBaseDicom():
         if attr is not None:
             values = np.empty(len(files), dtype=dict)
         for i, f in tqdm(enumerate(files), desc='Reading pixel data..'):
-            ds = dbdataset.read_dataset(f)  
-            coords_array.append(dbdataset.get_values(ds, dims))
+            ds = pydicom.dcmread(f)  
+            coords_array.append(get_values(ds, dims))
             # save as dict so numpy does not stack as arrays
             arrays[i] = {'pixel_data': dbdataset.pixel_data(ds)}
             if attr is not None:
-                values[i] = {'values': dbdataset.get_values(ds, params)}
+                values[i] = {'values': get_values(ds, params)}
 
         # Format as mesh
         coords_array = np.stack([v for v in coords_array], axis=-1)
@@ -483,7 +495,7 @@ class DataBaseDicom():
         if attr is None:
             # If attributes are not provided, read all 
             # attributes from the first file
-            ds = dbdataset.read_dataset(files[0])
+            ds = pydicom.dcmread(files[0])
             exclude = ['PixelData', 'FloatPixelData', 'DoubleFloatPixelData']
             params = []
             param_labels = []
@@ -504,10 +516,10 @@ class DataBaseDicom():
         coords_array = []
         values = np.empty(len(files), dtype=dict)
         for i, f in tqdm(enumerate(files), desc='Reading values..'):
-            ds = dbdataset.read_dataset(f)  
-            coords_array.append(dbdataset.get_values(ds, dims))
+            ds = pydicom.dcmread(f)  
+            coords_array.append(get_values(ds, dims))
             # save as dict so numpy does not stack as arrays
-            values[i] = {'values': dbdataset.get_values(ds, params)}
+            values[i] = {'values': get_values(ds, params)}
 
         # Format as mesh
         coords_array = np.stack([v for v in coords_array], axis=-1)
@@ -670,8 +682,8 @@ class DataBaseDicom():
         files = []
         values = []
         for f in tqdm(all_files, desc=f'Reading {attr}'):
-            ds = dbdataset.read_dataset(f)
-            v = dbdataset.get_values(ds, attr)
+            ds = pydicom.dcmread(f)
+            v = get_values(ds, attr)
             if key is not None:
                 v = key(v)
             if v in values:
@@ -701,8 +713,8 @@ class DataBaseDicom():
         files = register.files(self.register, entity)
         v = np.empty((len(files), len(attributes)), dtype=object)
         for i, f in enumerate(files):
-            ds = dbdataset.read_dataset(f)
-            v[i,:] = dbdataset.get_values(ds, attributes)
+            ds = pydicom.dcmread(f)
+            v[i,:] = get_values(ds, attributes)
         return v
 
     def _copy_patient(self, from_patient, to_patient):
@@ -757,7 +769,7 @@ class DataBaseDicom():
         # Copy the files to the new series 
         for i, f in tqdm(enumerate(files), total=len(files), desc=f'Copying series {to_series[1:]}'):
             # Read dataset and assign new properties
-            ds = dbdataset.read_dataset(f)
+            ds = pydicom.dcmread(f)
             self._write_dataset(ds, attr, n + 1 + i)
 
     def _max_study_id(self, patient_id):
@@ -807,8 +819,8 @@ class DataBaseDicom():
             # If the patient exists and has files, read from file
             files = register.files(self.register, patient)
             attr = const.PATIENT_MODULE
-            ds = dbdataset.read_dataset(files[0])
-            vals = dbdataset.get_values(ds, attr)
+            ds = pydicom.dcmread(files[0])
+            vals = get_values(ds, attr)
         except:
             # If the patient does not exist, generate values
             if patient in self.patients():
@@ -827,8 +839,8 @@ class DataBaseDicom():
             # If the study exists and has files, read from file
             files = register.files(self.register, study)
             attr = const.STUDY_MODULE
-            ds = dbdataset.read_dataset(files[0])
-            vals = dbdataset.get_values(ds, attr)
+            ds = pydicom.dcmread(files[0])
+            vals = get_values(ds, attr)
         except register.AmbiguousError as e:
             raise register.AmbiguousError(e)
         except:
@@ -836,9 +848,9 @@ class DataBaseDicom():
             if study[:-1] not in self.patients():
                 study_id = 1
             else:
-                study_id = 1 + self._max_study_id(study[-1])
+                study_id = 1 + self._max_study_id(study[1])
             attr = ['StudyInstanceUID', 'StudyDescription', 'StudyID']
-            study_uid = dbdataset.new_uid()
+            study_uid = pydicom.uid.generate_uid()
             study_desc = study[-1] if isinstance(study[-1], str) else study[-1][0]
             #study_date = datetime.today().strftime('%Y%m%d')
             vals = [study_uid, study_desc, str(study_id)]
@@ -851,8 +863,8 @@ class DataBaseDicom():
             # If the series exists and has files, read from file
             files = register.files(self.register, series)
             attr = const.SERIES_MODULE
-            ds = dbdataset.read_dataset(files[0])
-            vals = dbdataset.get_values(ds, attr)
+            ds = pydicom.dcmread(files[0])
+            vals = get_values(ds, attr)
         except register.AmbiguousError as e:
             raise register.AmbiguousError(e)
         except:
@@ -864,7 +876,7 @@ class DataBaseDicom():
             else:
                 series_number = 1 + self._max_series_number(study_uid)
             attr = ['SeriesInstanceUID', 'SeriesDescription', 'SeriesNumber']
-            series_uid = dbdataset.new_uid()
+            series_uid = pydicom.uid.generate_uid()
             series_desc = series[-1] if isinstance(series[-1], str) else series[-1][0]
             vals = [series_uid, series_desc, int(series_number)]
         return study_attr | {attr[i]:vals[i] for i in range(len(attr)) if vals[i] is not None}
@@ -872,9 +884,9 @@ class DataBaseDicom():
         
     def _write_dataset(self, ds:Dataset, attr:dict, instance_nr:int):
         # Set new attributes 
-        attr['SOPInstanceUID'] = dbdataset.new_uid()
+        attr['SOPInstanceUID'] = pydicom.uid.generate_uid()
         attr['InstanceNumber'] = str(instance_nr)
-        dbdataset.set_values(ds, list(attr.keys()), list(attr.values()))
+        set_values(ds, list(attr.keys()), list(attr.values()))
         # Save results in a new file
         rel_dir = os.path.join(
             f"Patient__{attr['PatientID']}", 
@@ -882,7 +894,7 @@ class DataBaseDicom():
             f"Series__{attr['SeriesNumber']}__{attr['SeriesDescription']}",
         )
         os.makedirs(os.path.join(self.path, rel_dir), exist_ok=True)
-        rel_path = os.path.join(rel_dir, dbdataset.new_uid() + '.dcm')
+        rel_path = os.path.join(rel_dir, pydicom.uid.generate_uid() + '.dcm')
         dbdataset.write(ds, os.path.join(self.path, rel_path))
         # Add an entry in the register
         register.add_instance(self.register, attr, rel_path)
@@ -899,11 +911,13 @@ class DataBaseDicom():
                 )
                 os.makedirs(zip_dir, exist_ok=True)
                 for sr in st['series']:
+                    zip_file = os.path.join(
+                        zip_dir, 
+                        f"Series__{sr['SeriesNumber']}__{sr['SeriesDescription']}.zip",
+                    )
+                    if os.path.exists(zip_file):
+                        continue
                     try:
-                        zip_file = os.path.join(
-                            zip_dir, 
-                            f"Series__{sr['SeriesNumber']}__{sr['SeriesDescription']}.zip",
-                        )
                         with zipfile.ZipFile(zip_file, 'w') as zipf:
                             for rel_path in sr['instances'].values():
                                 file = os.path.join(self.path, rel_path)

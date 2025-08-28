@@ -7,7 +7,7 @@ import pydicom
 
 import dbdicom.utils.dcm4che as dcm4che
 import dbdicom.utils.files as filetools
-import dbdicom.dataset as dbdataset
+from dbdicom.utils.pydicom_dataset import get_values
 
 
 COLUMNS = [   
@@ -41,7 +41,7 @@ def read(path):
                 if 'TransferSyntaxUID' in ds.file_meta:
                     if not 'Rows' in ds: # Image only
                         continue
-                    row = dbdataset.get_values(ds, tags)
+                    row = get_values(ds, tags)
                     array.append(row)
                     index = os.path.relpath(file, path)
                     dicom_files.append(index) 

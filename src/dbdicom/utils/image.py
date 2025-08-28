@@ -25,21 +25,21 @@ def affine_matrix(      # single slice function
     return affine 
 
 
-def slice_location( 
-        image_orientation:list,  # ImageOrientationPatient
-        image_position:list,    # ImagePositionPatient
-    ) -> float:
-    """Calculate Slice Location"""
+# def slice_location( 
+#         image_orientation:list,  # ImageOrientationPatient
+#         image_position:list,    # ImagePositionPatient
+#     ) -> float:
+#     """Calculate Slice Location"""
 
-    row_cosine = np.array(image_orientation[:3])    
-    column_cosine = np.array(image_orientation[3:]) 
-    slice_cosine = np.cross(row_cosine, column_cosine)
+#     row_cosine = np.array(image_orientation[:3])    
+#     column_cosine = np.array(image_orientation[3:]) 
+#     slice_cosine = np.cross(row_cosine, column_cosine)
 
-    # # The coronal orientation has a left-handed reference frame
-    # if np.array_equal(np.around(image_orientation, 3), [1,0,0,0,0,-1]):
-    #     slice_cosine = -slice_cosine
+#     # # The coronal orientation has a left-handed reference frame
+#     # if np.array_equal(np.around(image_orientation, 3), [1,0,0,0,0,-1]):
+#     #     slice_cosine = -slice_cosine
 
-    return np.dot(np.array(image_position), slice_cosine)
+#     return np.dot(np.array(image_position), slice_cosine)
 
 
 def dismantle_affine_matrix(affine):
