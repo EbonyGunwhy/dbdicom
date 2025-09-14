@@ -96,6 +96,27 @@ def index(dbtree, entity):
                     if sr['SeriesInstanceUID'] == series_uid:
                         return list(sr['instances'].values())
                     
+def remove(dbtree, entity):
+    if len(entity)==2:
+        patient_id = entity[1]
+        for pt in sorted(dbtree, key=lambda pt: pt['PatientID']):
+            if pt['PatientID'] == patient_id:
+                dbtree.remove(pt)
+    elif len(entity)==3:
+        study_uid = uid(dbtree, entity)
+        for pt in sorted(dbtree, key=lambda pt: pt['PatientID']):
+            for st in sorted(pt['studies'], key=lambda st: st['StudyInstanceUID']):
+                if st['StudyInstanceUID'] == study_uid:
+                    pt['studies'].remove(st)
+    elif len(entity)==4:
+        series_uid = uid(dbtree, entity)
+        for pt in sorted(dbtree, key=lambda pt: pt['PatientID']):
+            for st in sorted(pt['studies'], key=lambda st: st['StudyInstanceUID']):
+                for sr in sorted(st['series'], key=lambda sr: sr['SeriesNumber']):
+                    if sr['SeriesInstanceUID'] == series_uid:
+                        st['series'].remove(sr)
+    return dbtree
+                    
 
 def drop(dbtree, relpaths):
     for pt in sorted(dbtree[:], key=lambda pt: pt['PatientID']):

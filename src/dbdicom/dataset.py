@@ -370,7 +370,7 @@ def set_volume(ds, volume:vreg.Volume3D):
     set_affine(ds, volume.affine)
     if volume.coords is not None:
         # All other dimensions should have size 1
-        coords = volume.coords.reshape((volume.coords.shape[0], -1))
+        coords = [c.reshape(-1) for c in volume.coords]
         for i, d in enumerate(volume.dims):
             if not is_valid_dicom_tag(d):
                 raise ValueError(
@@ -380,7 +380,7 @@ def set_volume(ds, volume:vreg.Volume3D):
                     "tags to change the dimensions."
                 )
             else:
-                set_values(ds, d, coords[i,0])
+                set_values(ds, d, coords[i][0])
 
 
 

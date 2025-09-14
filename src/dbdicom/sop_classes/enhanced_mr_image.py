@@ -110,7 +110,7 @@ def from_volume(vol:vreg.Volume3D):
 
         # Assign parameters using dims as DICOM keywords
         for ax_i, axis in enumerate(vol.dims):
-            val = vol.coords[(ax_i,) + tuple(indices)]
+            val = vol.coords[ax_i][indices]
 
             sequence, attr = axis.split("/")
             if not hasattr(frame_ds, sequence):

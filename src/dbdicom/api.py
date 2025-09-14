@@ -4,8 +4,7 @@ import zipfile
 from pathlib import Path
 from typing import Union
 from tqdm import tqdm
-
-
+import numpy as np
 import vreg
 
 from dbdicom.dbd import DataBaseDicom
@@ -164,16 +163,22 @@ def series(entity:str | list, desc:str=None, contains:str=None, isin:list=None)-
             "To retrieve a series, the entity must be a database, patient or study."
         )
     
-def copy(from_entity:list, to_entity:list):
-    """Copy a DICOM entity (patient, study or series)
+def copy(from_entity:list, to_entity=None):
+    """Copy a DICOM  entity (patient, study or series)
 
     Args:
         from_entity (list): entity to copy
-        to_entity (list): entity after copying.
+        to_entity (list, optional): entity after copying. If this is not 
+            provided, a copy will be made in the same study and returned.
+
+    Returns:
+        entity: the copied entity. If th to_entity is provided, this is 
+        returned.
     """
     dbd = open(from_entity[0])
-    dbd.copy(from_entity, to_entity)
+    from_entity_copy = dbd.copy(from_entity, to_entity)
     dbd.close()
+    return from_entity_copy
 
 
 def delete(entity:list):
@@ -216,24 +221,41 @@ def split_series(series:list, attr:Union[str, tuple], key=None)->list:
     return split_series
 
 
-def volume(entity:Union[list, str], dims:list=None, verbose=1) -> Union[vreg.Volume3D, list]:
-    """Read volume or volumes.
+def volume(series:list, dims:list=None, verbose=1) -> vreg.Volume3D:
+    """Read volume from a series.
 
     Args:
-        entity (list, str): DICOM entity to read
+        series (list, str): DICOM entity to read
         dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
         verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
 
     Returns:
-        vreg.Volume3D | list: If the entity is a series this returns 
-        a volume, else a list of volumes.
+        vreg.Volume3D.
     """
-    if isinstance(entity, str):
-        entity = [entity]
-    dbd = open(entity[0])
-    vol = dbd.volume(entity, dims, verbose)
+    dbd = open(series[0])
+    vol = dbd.volume(series, dims, verbose)
     dbd.close()
     return vol
+
+
+def values(series:list, *attr, dims:list=None, verbose=1) -> Union[np.ndarray, list]:
+    """Read the values of some attributes from a DICOM series
+
+    Args:
+        series (list): DICOM series to read. 
+        attr (tuple, optional): DICOM attributes to read.
+        dims (list, optional): Dimensions to sort the values. 
+            If dims is not provided, values are sorted by 
+            InstanceNumber.
+
+    Returns:
+        tuple: arrays with values for the attributes.
+    """
+    dbd = open(series[0])
+    values = dbd.values(series, *attr, dims=dims, verbose=verbose)
+    dbd.close()
+    return values
+
 
 def write_volume(vol:Union[vreg.Volume3D, tuple], series:list, ref:list=None):
     """Write a vreg.Volume3D to a DICOM series
@@ -245,6 +267,25 @@ def write_volume(vol:Union[vreg.Volume3D, tuple], series:list, ref:list=None):
     """
     dbd = open(series[0])
     dbd.write_volume(vol, series, ref)
+    dbd.close()
+
+
+def edit(series:list, new_values:dict, dims:list=None, verbose=1):
+    """Edit attribute values in a DICOM series
+
+    Warning: this function edits all values as requested. Please take care 
+    when editing attributes that affect the DICOM file organisation, such as 
+    UIDs, as this could corrupt the database.
+
+    Args:
+        series (list): DICOM series to edit
+        new_values (dict): dictionary with attribute: value pairs to write to the series
+        dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+        verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
+        
+    """
+    dbd = open(series[0])
+    dbd.edit(series, new_values, dims=dims, verbose=verbose)
     dbd.close()
 
 def to_nifti(series:list, file:str, dims:list=None, verbose=1):
@@ -272,35 +313,6 @@ def from_nifti(file:str, series:list, ref:list=None):
     dbd = open(series[0])
     dbd.from_nifti(file, series, ref)
     dbd.close()
-
-
-def values(series:list, attr=None, dims:list=None, coords=False) -> Union[dict, tuple]:
-    """Read the values of some or all attributes from a DICOM series
-
-    Args:
-        series (list or str): DICOM series to read. This can also 
-            be a path to a folder containing DICOM files, or a 
-            patient or study to read all series in that patient or 
-            study. In those cases a list is returned.
-        attr (list, optional): list of DICOM attributes to read.
-        dims (list, optional): Dimensions to sort the attributes. 
-            If dims is not provided, values are sorted by 
-            InstanceNumber.
-        coords (bool): If set to True, the coordinates of the 
-            attributes are returned alongside the values
-
-    Returns:
-        dict or tuple: values as a dictionary in the last 
-            return value, where each value is a numpy array with 
-            the required dimensions. If coords is set to True, 
-            these are returned too.
-    """
-    if isinstance(series, str):
-        series = [series]
-    dbd = open(series[0])
-    array = dbd.values(series, attr, dims, coords)
-    dbd.close()
-    return array
 
 
 def files(entity:list) -> list:

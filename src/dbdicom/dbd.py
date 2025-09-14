@@ -1,8 +1,10 @@
 import os
+import shutil
 import json
 from typing import Union
 import zipfile
 import re
+from copy import deepcopy
 
 from tqdm import tqdm
 import numpy as np
@@ -76,14 +78,16 @@ class DataBaseDicom():
         Args:
             entity (list): entity to delete
         """
+        # delete datasets on disk
         removed = register.index(self.register, entity)
-        # delete datasets marked for removal
         for index in removed:
             file = os.path.join(self.path, index)
             if os.path.exists(file): 
                 os.remove(file)
-        # and drop then from the register
-        self.register = register.drop(self.register, removed)
+        # drop the entity from the register
+        register.remove(self.register, entity)
+        # cleanup empty folders
+        remove_empty_folders(entity[0])
         return self
     
 
@@ -206,22 +210,22 @@ class DataBaseDicom():
             return register.series(self.register, entity, desc, contains, isin)
 
 
-    def volume(self, entity:Union[list, str], dims:list=None, verbose=1) -> Union[vreg.Volume3D, list]:
-        """Read volume or volumes.
+    def volume(self, entity:Union[list, str], dims:list=None, verbose=1) -> vreg.Volume3D:
+        """Read volume.
 
         Args:
-            entity (list, str): DICOM entity to read
+            entity (list, str): DICOM series to read
             dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
             verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
 
         Returns:
-            vreg.Volume3D | list: If the entity is a series this returns 
-            a volume, else a list of volumes.
+            vreg.Volume3D:
         """
-        if isinstance(entity, str): # path to folder
-            return [self.volume(s, dims) for s in self.series(entity)]
-        if len(entity) < 4: # folder, patient or study
-            return [self.volume(s, dims) for s in self.series(entity)]
+        # if isinstance(entity, str): # path to folder
+        #     return [self.volume(s, dims) for s in self.series(entity)]
+        # if len(entity) < 4: # folder, patient or study
+        #     return [self.volume(s, dims) for s in self.series(entity)]
+        
         if dims is None:
             dims = []
         elif isinstance(dims, str):
@@ -230,33 +234,39 @@ class DataBaseDicom():
             dims = list(dims)
         dims = ['SliceLocation'] + dims
 
-        files = register.files(self.register, entity)
-        
         # Read dicom files
-        values = []
+        values = [[] for _ in dims]
         volumes = []
+
+        files = register.files(self.register, entity)
         for f in tqdm(files, desc='Reading volume..', disable=(verbose==0)):
             ds = pydicom.dcmread(f)
-            values.append(get_values(ds, dims))
+            values_f = get_values(ds, dims)
+            for d in range(len(dims)):
+                values[d].append(values_f[d])
             volumes.append(dbdataset.volume(ds))
 
-        # Format as mesh
-        # coords = np.stack(values, axis=-1, dtype=object) 
-        values = [np.array(v, dtype=object) for v in values] # object array to allow for mixed types
-        coords = np.stack(values, axis=-1)
+        # Format coordinates as mesh
+        coords = [np.array(v) for v in values]
         coords, inds = dbdicom.utils.arrays.meshvals(coords)
-        vols = np.array(volumes)
-        vols = vols[inds].reshape(coords.shape[1:])
 
         # Check that all slices have the same coordinates
-        c0 = coords[1:,0,...]
-        for k in range(coords.shape[1]-1):
-            if not np.array_equal(coords[1:,k+1,...], c0):
-                raise ValueError(
-                    "Cannot build a single volume. Not all slices "
-                    "have the same coordinates."     
-                )
-            
+        if len(dims) > 1:
+            # Loop over all coordinates after slice location
+            for c in coords[1:]:
+                # Loop over all slice locations
+                for k in range(1, c.shape[0]):
+                    # Coordinate c of slice k
+                    if not np.array_equal(c[k,...], c[0,...]):
+                        raise ValueError(
+                            "Cannot build a single volume. Not all slices "
+                            "have the same coordinates."     
+                        )
+
+        # Build volumes
+        vols = np.array(volumes)
+        vols = vols[inds].reshape(coords[0].shape)
+
         # Infer spacing between slices from slice locations
         # Technically only necessary if SpacingBetweenSlices not set or incorrect
         vols = infer_slice_spacing(vols)
@@ -272,11 +282,66 @@ class DataBaseDicom():
                 # Then try again
             vol = vreg.join(vols)
         if vol.ndim > 3:
+            # Coordinates of slice 0
+            c0 = [c[0,...] for c in coords[1:]]
             vol.set_coords(c0)
             vol.set_dims(dims[1:])
         return vol
 
-    
+
+    def values(self, series:list, *attr, dims:list=None, verbose=1) -> Union[dict, tuple]:
+        """Read the values of some attributes from a DICOM series
+
+        Args:
+            series (list): DICOM series to read. 
+            attr (tuple, optional): DICOM attributes to read.
+            dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+            verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
+
+        Returns:
+            tuple: arrays with values for the attributes.
+        """
+        # if isinstance(series, str): # path to folder
+        #     return [self.values(s, attr, dims) for s in self.series(series)]
+        # if len(series) < 4: # folder, patient or study
+        #     return [self.values(s, attr, dims) for s in self.series(series)]
+
+        if dims is None:
+            dims = ['InstanceNumber']
+        elif np.isscalar(dims):
+            dims = [dims]
+        else:
+            dims = list(dims)
+            
+        # Read dicom files
+        coord_values = [[] for _ in dims]
+        attr_values = [[] for _ in attr]
+
+        files = register.files(self.register, series)
+        for f in tqdm(files, desc='Reading values..', disable=(verbose==0)):
+            ds = pydicom.dcmread(f)
+            coord_values_f = get_values(ds, dims)
+            for d in range(len(dims)):
+                coord_values[d].append(coord_values_f[d])
+            attr_values_f = get_values(ds, attr)
+            for a in range(len(attr)):
+                attr_values[a].append(attr_values_f[a])
+
+        # Format coordinates as mesh
+        coords = [np.array(v) for v in coord_values]
+        coords, inds = dbdicom.utils.arrays.meshvals(coords)
+
+        # Sort values accordingly
+        values = [np.array(v) for v in attr_values]
+        values = [v[inds].reshape(coords[0].shape) for v in values]
+
+        # Return values
+        if len(values) == 1:
+            return values[0]
+        else:
+            return tuple(values)
+
+
     def write_volume(
             self, vol:Union[vreg.Volume3D, tuple], series:list, 
             ref:list=None, 
@@ -288,6 +353,10 @@ class DataBaseDicom():
             series (list): DICOM series to read
             ref (list): Reference series
         """
+        series_full_name = full_name(series)
+        if series_full_name in self.series():
+            raise ValueError(f"Series {series_full_name[-1]} already exists in study {series_full_name[-2]}.")
+
         if isinstance(vol, tuple):
             vol = vreg.volume(vol[0], vol[1])
         if ref is None:
@@ -318,10 +387,84 @@ class DataBaseDicom():
                 slices = vt.split()
                 for sl in slices:
                     dbdataset.set_volume(ds, sl)
-                    sl_coords = [sl.coords[i,...].ravel()[0] for i in range(len(sl.dims))]
+                    sl_coords = [c.ravel()[0] for c in sl.coords]
                     set_value(ds, sl.dims, sl_coords)
                     self._write_dataset(ds, attr, n + 1 + i)
                     i+=1
+        return self
+    
+
+    def edit(
+            self, series:list, new_values:dict, dims:list=None, verbose=1,
+        ):
+        """Edit attribute values in a new DICOM series
+
+        Args:
+            series (list): DICOM series to edit
+            new_values (dict): dictionary with attribute: value pairs to write to the series
+            dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+            verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
+        """
+
+        if dims is None:
+            dims = ['InstanceNumber']
+        elif np.isscalar(dims):
+            dims = [dims]
+        else:
+            dims = list(dims)
+            
+        # Check that all values have the correct nr of elements
+        files = register.files(self.register, series)
+        for a in new_values.values():
+            if np.isscalar(a):
+                pass
+            elif np.array(a).size != len(files):
+                raise ValueError(
+                    f"Incorrect value lengths. All values need to have {len(files)} elements"
+                )
+
+        # Read dicom files to sort them
+        coord_values = [[] for _ in dims]
+        for f in tqdm(files, desc='Sorting series..', disable=(verbose==0)):
+            ds = pydicom.dcmread(f)
+            coord_values_f = get_values(ds, dims)
+            for d in range(len(dims)):
+                coord_values[d].append(coord_values_f[d])
+
+        # Format coordinates as mesh
+        coords = [np.array(v) for v in coord_values]
+        coords, inds = dbdicom.utils.arrays.meshvals(coords)
+
+        # Sort files accordingly
+        files = np.array(files)[inds]
+
+        # Now edit and write the files
+        attr = self._series_attributes(series)
+        n = self._max_instance_number(attr['SeriesInstanceUID'])
+
+        # Drop existing attributes if they are edited
+        attr = {a:attr[a] for a in attr if a not in new_values}
+
+        # List instances to be edited
+        to_drop = register.index(self.register, series)
+         
+        # Write the instances
+        tags = list(new_values.keys())
+        for i, f in tqdm(enumerate(files), desc='Writing values..', disable=(verbose==0)):
+            ds = pydicom.dcmread(f)
+            values = []
+            for a in new_values.values():
+                if np.isscalar(a):
+                    values.append(a)
+                else:
+                    values.append(np.array(a).reshape(-1)[i])
+            set_values(ds, tags, values)
+            self._write_dataset(ds, attr, n + 1 + i)
+
+        # Delete the originals files
+        register.drop(self.register, to_drop)
+        [os.remove(os.path.join(self.path, idx)) for idx in to_drop]
+
         return self
 
 
@@ -456,103 +599,7 @@ class DataBaseDicom():
             return arrays, values_return
         
 
-    def values(self, series:list, attr=None, dims:list=None, coords=False) -> Union[dict, tuple]:
-        """Read the values of some or all attributes from a DICOM series
 
-        Args:
-            series (list or str): DICOM series to read. This can also 
-                be a path to a folder containing DICOM files, or a 
-                patient or study to read all series in that patient or 
-                study. In those cases a list is returned.
-            attr (list, optional): list of DICOM attributes to read.
-            dims (list, optional): Dimensions to sort the attributes. 
-                If dims is not provided, values are sorted by 
-                InstanceNumber.
-            coords (bool): If set to True, the coordinates of the 
-                attributes are returned alongside the values
-
-        Returns:
-            dict or tuple: values as a dictionary in the last 
-                return value, where each value is a numpy array with 
-                the required dimensions. If coords is set to True, 
-                these are returned too.
-        """
-        if isinstance(series, str): # path to folder
-            return [self.values(s, attr, dims, coords) for s in self.series(series)]
-        if len(series) < 4: # folder, patient or study
-            return [self.values(s, attr, dims, coords) for s in self.series(series)]
-
-        if dims is None:
-            dims = ['InstanceNumber']
-        elif np.isscalar(dims):
-            dims = [dims]
-        else:
-            dims = list(dims)
-
-        files = register.files(self.register, series)
-
-        # Ensure return_vals is a list
-        if attr is None:
-            # If attributes are not provided, read all 
-            # attributes from the first file
-            ds = pydicom.dcmread(files[0])
-            exclude = ['PixelData', 'FloatPixelData', 'DoubleFloatPixelData']
-            params = []
-            param_labels = []
-            for elem in ds:
-                if elem.keyword not in exclude:
-                    params.append(elem.tag)
-                    # For known tags use the keyword as label
-                    label = elem.tag if len(elem.keyword)==0 else elem.keyword
-                    param_labels.append(label)
-        elif np.isscalar(attr):
-            params = [attr]
-            param_labels = params[:]
-        else:
-            params = list(attr)
-            param_labels = params[:]
-
-        # Read dicom files
-        coords_array = []
-        values = np.empty(len(files), dtype=dict)
-        for i, f in tqdm(enumerate(files), desc='Reading values..'):
-            ds = pydicom.dcmread(f)  
-            coords_array.append(get_values(ds, dims))
-            # save as dict so numpy does not stack as arrays
-            values[i] = {'values': get_values(ds, params)}
-
-        # Format as mesh
-        coords_array = np.stack([v for v in coords_array], axis=-1)
-        coords_array, inds = dbdicom.utils.arrays.meshvals(coords_array)
-
-        # Sort values accordingly
-        values = values[inds].reshape(-1)
-
-        # Return values as a dictionary
-        values_dict = {}
-        for p in range(len(params)):
-            # Get the type from the first value
-            vp0 = values[0]['values'][p]
-            # Build an array of the right type
-            vp = np.zeros(values.size, dtype=type(vp0))
-            # Populate the arrate with values for parameter p
-            for i, v in enumerate(values):
-                vp[i] = v['values'][p]
-            # Reshape values for parameter p
-            vp = vp.reshape(coords_array.shape[1:])
-            # Eneter in the dictionary
-            values_dict[param_labels[p]] = vp
-
-        # If only one, return as value
-        if len(params) == 1:
-            values_return = values_dict[params[0]]
-        else:
-            values_return = values_dict
-
-        if coords:
-            return values_return, coords_array
-        else:
-            return values_return
         
 
     def files(self, entity:list) -> list:
@@ -622,34 +669,66 @@ class DataBaseDicom():
         else:
             return {p: values[i] for i, p in enumerate(pars)} 
     
-    def copy(self, from_entity, to_entity):
+    def copy(self, from_entity, to_entity=None):
         """Copy a DICOM  entity (patient, study or series)
 
         Args:
             from_entity (list): entity to copy
-            to_entity (list): entity after copying.
+            to_entity (list, optional): entity after copying. If this is not 
+                provided, a copy will be made in the same study and returned
+
+        Returns:
+            entity: the copied entity. If th to_entity is provided, this is 
+            returned.
         """
         if len(from_entity) == 4:
+            if to_entity is None:
+                to_entity = deepcopy(from_entity)
+                if isinstance(to_entity[-1], tuple):
+                    to_entity[-1] = (to_entity[-1][0] + '_copy', 0)
+                else:
+                    to_entity[-1] = (to_entity[-1] + '_copy', 0)
+                while to_entity in self.series():
+                    to_entity[-1][1] += 1
             if len(to_entity) != 4:
                 raise ValueError(
                     f"Cannot copy series {from_entity} to series {to_entity}. "
                     f"{to_entity} is not a series (needs 4 elements)."
                 )
-            return self._copy_series(from_entity, to_entity)
+            self._copy_series(from_entity, to_entity)
+            return to_entity
+        
         if len(from_entity) == 3:
+            if to_entity is None:
+                to_entity = deepcopy(from_entity)
+                if isinstance(to_entity[-1], tuple):
+                    to_entity[-1] = (to_entity[-1][0] + '_copy', 0)
+                else:
+                    to_entity[-1] = (to_entity[-1] + '_copy', 0)
+                while to_entity in self.studies():
+                    to_entity[-1][1] += 1
             if len(to_entity) != 3:
                 raise ValueError(
                     f"Cannot copy study {from_entity} to study {to_entity}. "
                     f"{to_entity} is not a study (needs 3 elements)."
                 )
-            return self._copy_study(from_entity, to_entity)
+            self._copy_study(from_entity, to_entity)
+            return to_entity
+        
         if len(from_entity) == 2:
+            if to_entity is None:
+                to_entity = deepcopy(from_entity)
+                to_entity[-1] += '_copy'
+                while to_entity in self.patients():
+                    to_entity[-1] += '_copy'
             if len(to_entity) != 2:
                 raise ValueError(
                     f"Cannot copy patient {from_entity} to patient {to_entity}. "
                     f"{to_entity} is not a patient (needs 2 elements)."
                 )                
-            return self._copy_patient(from_entity, to_entity)
+            self._copy_patient(from_entity, to_entity)
+            return to_entity
+        
         raise ValueError(
             f"Cannot copy {from_entity} to {to_entity}. "
         )
@@ -930,6 +1009,28 @@ class DataBaseDicom():
 
 
 
+def full_name(entity):
+
+    if len(entity)==3: # study
+        if isinstance(entity[-1], tuple):
+            return entity
+        else:
+            full_name_study = deepcopy(entity)
+            full_name_study[-1] = (full_name_study[-1], 0)
+            return full_name_study
+        
+    elif len(entity)==4: # series
+        full_name_study = full_name(entity[:3])
+        series = full_name_study + [entity[-1]]
+        if isinstance(series[-1], tuple):
+            return series
+        else:
+            full_name_series = deepcopy(series)
+            full_name_series[-1] = (full_name_series[-1], 0)
+            return full_name_series
+    else:
+        return entity
+
 
 def clean_folder_name(name, replacement="", max_length=255):
     # Strip leading/trailing whitespace
@@ -951,6 +1052,30 @@ def clean_folder_name(name, replacement="", max_length=255):
 
     # Truncate to max length (common max: 255 bytes)
     return name[:max_length] or "folder"
+
+
+
+def remove_empty_folders(path):
+    """
+    Removes all empty subfolders from a given directory.
+
+    This function walks through the directory tree from the bottom up.
+    This is crucial because it allows child directories to be removed before
+    their parents, potentially making the parent directory empty and
+    eligible for removal in the same pass.
+
+    Args:
+        path (str): The absolute or relative path to the directory to scan.
+    """
+    # Walk the directory tree in a bottom-up manner (topdown=False)
+    for dirpath, dirnames, filenames in os.walk(path, topdown=False):
+        # A directory is considered empty if it has no subdirectories and no files
+        if not dirnames and not filenames:
+            try:
+                shutil.rmtree(dirpath)
+            except OSError as e:
+                # This might happen due to permissions issues
+                print(f"Error removing {dirpath}: {e}")
 
 
 
@@ -1006,6 +1131,7 @@ def infer_slice_spacing(vols):
         )    
 
     return vols.reshape(shape)
+
 
 
 

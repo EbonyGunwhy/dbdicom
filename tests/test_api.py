@@ -7,6 +7,8 @@ import vreg
 
 tmp = os.path.join(os.getcwd(), 'tests', 'tmp')
 os.makedirs(tmp, exist_ok=True)
+shutil.rmtree(tmp)
+os.makedirs(tmp, exist_ok=True)
 
 
 def test_write_volume():
@@ -43,20 +45,81 @@ def test_volume():
     assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
     assert np.linalg.norm(vol2.affine-vol.affine) == 0
     assert vol2.dims == vol.dims
-    assert np.array_equal(vol2.coords, vol.coords)
+    assert np.array_equal(vol2.coords[0], vol.coords[0])
 
     values = 100*np.random.rand(256, 256, 3, 2, 2).astype(np.float32)
-    dims=['FlipAngle','ImageType']
-    vol = vreg.volume(values, dims=dims, coords=([10, 20], ['INPHASE', 'OUTPHASE']), orient='coronal')
+    dims = ['FlipAngle','ImageType']
+    coords = ([10, 20], ['INPHASE', 'OUTPHASE'])
+    vol = vreg.volume(values, dims=dims, coords=coords, orient='coronal')
     series = [tmp, '007', 'dbdicom_test', 'vfa_dixon']
     db.write_volume(vol, series)
     vol2 = db.volume(series, dims=dims)
     assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
     assert np.linalg.norm(vol2.affine-vol.affine) == 0
     assert vol2.dims == vol.dims
-    assert np.array_equal(vol2.coords, vol.coords)
+    assert np.array_equal(vol2.coords[0], vol.coords[0])
 
     shutil.rmtree(tmp)
+
+
+def test_values():
+
+    values = 100*np.random.rand(256, 256, 3, 2, 2).astype(np.float32)
+    dims = ['FlipAngle','ImageType']
+    coords = ([10, 20], ['INPHASE', 'OUTPHASE'])
+    vol = vreg.volume(values, dims=dims, coords=coords, orient='coronal')
+    series = [tmp, '007', 'dbdicom_test', 'vfa_dixon']
+    db.write_volume(vol, series)
+
+    # Read all slice locations as 1D array
+    locs = db.values(series, 'SliceLocation')
+    assert locs.shape == (12,)
+    assert np.array_equal(locs[-3:], [0,1,2])
+
+    locs, fa = db.values(series, 'SliceLocation', 'FlipAngle')
+    assert np.array_equal(np.unique(fa), [10,20])
+
+    locs = db.values(series, 'SliceLocation', dims=['SliceLocation', 'FlipAngle', 'ImageType'])
+    assert locs.shape == (3,2,2)
+    assert np.unique(locs[0,...]) == [0]
+
+    locs, it = db.values(series, 'SliceLocation', 'ImageType', dims=['SliceLocation', 'FlipAngle', 'ImageType'])
+    assert it.shape == (3,2,2)
+
+    pn = db.values(series, 'PatientName', dims=['SliceLocation', 'FlipAngle', 'ImageType'])
+    assert pn.shape == (3,2,2)
+    assert np.unique(pn) == ['Anonymous']
+
+    # Improper dimensions
+    try:
+        db.values(series, 'SliceLocation', 'ImageType', dims=['SliceLocation'])
+    except:
+        assert True
+    else:
+        assert False
+
+    shutil.rmtree(tmp)
+
+
+def test_edit():
+
+    values = 100*np.random.rand(256, 256, 3, 2, 2).astype(np.float32)
+    dims = ['FlipAngle','ImageType']
+    coords = ([10, 20], ['INPHASE', 'OUTPHASE'])
+    vol = vreg.volume(values, dims=dims, coords=coords, orient='coronal')
+    series = [tmp, '007', 'dbdicom_test', 'vfa_dixon']
+    db.write_volume(vol, series)
+
+    shape = (3,2,2)
+    dims = ('SliceLocation', 'FlipAngle', 'ImageType')
+    new_tr = np.arange(np.prod(shape)).reshape(shape)
+    new_pn = np.full(shape, 'James Bond').reshape(shape)
+    new_values = {'RepetitionTime': new_tr, 'PatientName': new_pn}
+    db.edit(series, new_values, dims=dims)
+    tr, pn = db.values(series, 'RepetitionTime', 'PatientName', dims=dims)
+    assert np.array_equal(tr, new_tr)
+    assert np.array_equal(pn, new_pn)
+
 
 def test_write_database():
     values = 100*np.random.rand(16, 16, 4).astype(np.float32)
@@ -94,6 +157,8 @@ def test_write_database():
     shutil.rmtree(tmp)
 
 def test_copy():
+
+    # Build some data
     tmp1 = os.path.join(tmp, 'dir1')
     tmp2 = os.path.join(tmp, 'dir2')
     os.makedirs(tmp1, exist_ok=True)
@@ -102,31 +167,41 @@ def test_copy():
     vol = vreg.volume(values)
     db.write_volume(vol, [tmp1, '007', 'test', 'ax'])    # create series ax
     db.write_volume(vol, [tmp1, '007', 'test2', 'ax2'])    # create series ax
+
+    # Copy to named entity
     db.copy([tmp1, '007', 'test2', 'ax2'], [tmp2, '007', 'test2', 'ax2'])
     db.copy([tmp1, '007', 'test2', 'ax2'], [tmp2, '007', 'test2', 'ax'])
     db.copy([tmp1, '007', 'test2', 'ax2'], [tmp2, '007', 'test2', 'ax'])
+    copy_ax2 = db.copy([tmp1, '007', 'test2', 'ax2'])
     print('0')
     [print(s) for s in db.series(tmp2)]
+
     db.copy([tmp1, '007', 'test2'], [tmp2, '008', 'test2'])
+    copy_test2 = db.copy([tmp1, '007', 'test2'])
+    assert len(db.series(copy_test2)) == len(db.series([tmp1, '007', 'test2']))
     print('1')
     [print(s) for s in db.series(tmp2)]
     assert 2==len(db.patients(tmp2))
-    assert 3==len(db.series(tmp2))
+    assert 4==len(db.series(tmp2))
     db.copy([tmp1, '007', 'test2'], [tmp2, '008', 'test2']) 
     print('2')
     [print(s) for s in db.series(tmp2)]
-    assert 4==len(db.series(tmp2))
+    assert 6==len(db.series(tmp2))
     db.copy([tmp1, '007'], [tmp2, '008'])
+    copy_007 = db.copy([tmp1, '007'])
     print('3')
     [print(s) for s in db.series(tmp2)]
-    assert 6==len(db.series(tmp2))
-    assert 4==len(db.studies(tmp2))
+    assert 11==len(db.series(tmp2))
+    assert 5==len(db.studies(tmp2))
+    assert len(db.series(copy_007)) == len(db.series([tmp1, '007']))
 
     shutil.rmtree(tmp)
 
 
 if __name__ == '__main__':
 
+    test_values()
+    test_edit()
     test_write_volume()
     test_volume()
     test_write_database()
