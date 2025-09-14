@@ -125,8 +125,18 @@ def test_write_database():
     values = 100*np.random.rand(16, 16, 4).astype(np.float32)
     vol = vreg.volume(values)
     db.write_volume(vol, [tmp, '007', 'test', 'ax'])    # create series ax
-    db.write_volume(vol, [tmp, '007', 'test', 'ax'])    # add to it
-    db.write_volume(vol, [tmp, '007', 'test', ('ax', 0)])   # add to it
+    try:
+        db.write_volume(vol, [tmp, '007', 'test', 'ax'])    # add to it
+    except:
+        assert True
+    else:
+        assert False
+    try:
+        db.write_volume(vol, [tmp, '007', 'test', ('ax', 0)])   # add to it
+    except:
+        assert True
+    else:
+        assert False
     db.write_volume(vol, [tmp, '007', 'test', ('ax', 1)])   # create a new series ax
     db.write_volume(vol, [tmp, '007', 'test', ('ax', 3)])   # create a new series ax
     try:
@@ -137,7 +147,12 @@ def test_write_database():
         assert False
     db.write_volume(vol, [tmp, '008', 'test', 'ax'])            # Create a new patient
     db.write_volume(vol, [tmp, '008', 'test', 'ax-2'])          # Add a new series
-    db.write_volume(vol, [tmp, '008', ('test', 0), 'ax'])       # Add to the series ax 
+    try:
+        db.write_volume(vol, [tmp, '008', ('test', 0), 'ax'])       # Add to the series ax 
+    except:
+        assert True
+    else:
+        assert False
     db.write_volume(vol, [tmp, '008', ('test', 1), 'ax'])       # Add to a new study
     try:
         db.write_volume(vol, [tmp, '008', 'test', 'ax'])       # Ambiguous
