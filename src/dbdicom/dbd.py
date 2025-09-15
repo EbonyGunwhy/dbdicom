@@ -72,14 +72,25 @@ class DataBaseDicom():
 
     
 
-    def delete(self, entity):
+    def delete(self, entity, not_exists_ok=False):
         """Delete a DICOM entity from the database
 
         Args:
             entity (list): entity to delete
+            not_exists_ok (bool): By default, an exception is raised when attempting 
+                to delete an entity that does not exist. Set this to True to pass over this silently.
         """
         # delete datasets on disk
-        removed = register.index(self.register, entity)
+        try:
+            removed = register.index(self.register, entity)
+        except ValueError:
+            if not_exists_ok:
+                return self
+            else:
+                raise ValueError(
+                    f"The entity you are trying to delete does not exist. \n"
+                    f"You can set not_exists_ok=True in dbdicom.delete() to avoid this error."
+                )
         for index in removed:
             file = os.path.join(self.path, index)
             if os.path.exists(file): 
