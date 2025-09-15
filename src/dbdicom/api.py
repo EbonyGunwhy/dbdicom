@@ -181,14 +181,16 @@ def copy(from_entity:list, to_entity=None):
     return from_entity_copy
 
 
-def delete(entity:list):
+def delete(entity:list, not_exists_ok=False):
     """Delete a DICOM entity
 
     Args:
         entity (list): entity to delete
+        not_exists_ok (bool): By default, an exception is raised when attempting 
+            to delete an entity that does not exist. Set this to True to pass over this silently.
     """
     dbd = open(entity[0])
-    dbd.delete(entity)
+    dbd.delete(entity, not_exists_ok)
     dbd.close()
 
 
