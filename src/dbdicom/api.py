@@ -420,6 +420,8 @@ def _copy_and_extract_zips(src_folder, dest_folder):
                 if file.lower().endswith('.zip'):
                     try:
                         zip_dest_folder = dest_file_path[:-4]
+                        if os.path.exists(zip_dest_folder):
+                            continue
                         with zipfile.ZipFile(src_file_path, 'r') as zip_ref:
                             zip_ref.extractall(zip_dest_folder)
                         #tqdm.write(f"Extracted ZIP: {src_file_path}")
@@ -427,6 +429,8 @@ def _copy_and_extract_zips(src_folder, dest_folder):
                     except zipfile.BadZipFile:
                         tqdm.write(f"Bad ZIP file skipped: {src_file_path}")
                 else:
+                    if os.path.exists(dest_file_path):
+                        continue
                     shutil.copy2(src_file_path, dest_file_path)
 
                 pbar.update(1)
