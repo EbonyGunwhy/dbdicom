@@ -11,6 +11,7 @@ shutil.rmtree(tmp)
 os.makedirs(tmp, exist_ok=True)
 
 
+
 def test_write_volume():
 
     values = 100*np.random.rand(128, 192, 20).astype(np.float32)
@@ -24,11 +25,84 @@ def test_write_volume():
     series = [tmp, '007', 'dbdicom_test', 'dixon']
     db.write_volume(vol, series)
 
+    # Writing to an existing series returns an error by default
+    try:
+        db.write_volume(vol, series)
+    except:
+        assert True
+    else:
+        assert False
+
+    # Translate the volume in the z-direction over 10mm and append to the series
+    # This creates a series with two volumes separated by a gap of 5 mm
+    vol2 = vol.translate([0,0,20], coords='volume')
+    db.write_volume(vol2, series, append=True)
+
+    # Reading now throws an error as there are multiple volumes in the series
+    try:
+        db.volume(series, dims=['ImageType'])
+    except:
+        assert True
+    else:
+        assert False
+
+
+    shutil.rmtree(tmp)
+
+
+def test_volumes_2d():
+
+    # Write one volume
+    values = 100*np.random.rand(128, 192, 5).astype(np.float32)
+    vol = vreg.volume(values)
+    series = [tmp, '007', 'dbdicom_test', 'ax']
+    db.write_volume(vol, series)
+
+    # Shift it up to leave a gap and write to the same series
+    vol2 = vol.translate([0,0,10], coords='volume')
+    db.write_volume(vol2, series, append=True)
+
+    # Trying to read as a single volume throws an error because of the gap
+    try:
+        db.volume(series)
+    except:
+        assert True
+    else:
+        assert False
+
+    # But we can read them as 2D volumes, returning 10 2D volumes
+    vols = db.volumes_2d(series)
+    assert len(vols) == 10
+
+    # Now 4D
+    values = np.zeros((256, 256, 5, 2))
+    affine = np.eye(4)
+    vol = vreg.volume(values, affine, coords=(['INPHASE', 'OUTPHASE'], ), dims=['ImageType'])
+    series = [tmp, '007', 'dbdicom_test', 'dixon']
+    db.write_volume(vol, series)
+
+    vol2 = vol.translate([0,0,10], coords='volume')
+    db.write_volume(vol2, series, append=True)
+
+    vols = db.volumes_2d(series, dims=['ImageType'])
+    assert len(vols) == 10
+    assert vols[-1].shape == (256, 256, 1, 2)
+
     shutil.rmtree(tmp)
 
 
 def test_volume():
 
+    # One slice
+    values = 100*np.random.rand(128, 192, 1).astype(np.float32)
+    vol = vreg.volume(values)
+    series = [tmp, '007', 'test', 'slice']
+    db.write_volume(vol, series)
+    vol2 = db.volume(series)
+    assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
+    assert np.linalg.norm(vol2.affine-vol.affine) == 0
+
+    # 3D volume
     values = 100*np.random.rand(128, 192, 20).astype(np.float32)
     vol = vreg.volume(values)
     series = [tmp, '007', 'test', 'ax']
@@ -37,6 +111,7 @@ def test_volume():
     assert np.linalg.norm(vol2.values-vol.values) < 0.0001*np.linalg.norm(vol.values)
     assert np.linalg.norm(vol2.affine-vol.affine) == 0
 
+    # 4D volume
     values = 100*np.random.rand(256, 256, 3, 2).astype(np.float32)
     vol = vreg.volume(values, dims=['ImageType'], coords=(['INPHASE', 'OUTPHASE'], ), orient='coronal')
     series = [tmp, '007', 'dbdicom_test', 'dixon']
@@ -215,11 +290,12 @@ def test_copy():
 
 if __name__ == '__main__':
 
-    test_values()
-    test_edit()
-    test_write_volume()
-    test_volume()
-    test_write_database()
-    test_copy()
+    # test_write_volume()
+    test_volumes_2d()
+    # test_values()
+    # test_edit()
+    # test_volume()
+    # test_write_database()
+    # test_copy()
 
     print('All api tests have passed!!!')

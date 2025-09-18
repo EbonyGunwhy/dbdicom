@@ -292,6 +292,8 @@ class DataBaseDicom():
                 v.affine[:3,2] = -v.affine[:3,2]
                 # Then try again
             vol = vreg.join(vols)
+
+        # For multi-dimensional volumes, set dimensions and coordinates
         if vol.ndim > 3:
             # Coordinates of slice 0
             c0 = [c[0,...] for c in coords[1:]]
@@ -299,6 +301,128 @@ class DataBaseDicom():
             vol.set_dims(dims[1:])
         return vol
 
+
+    def volumes_2d(self, entity:Union[list, str], dims:list=None, verbose=1) -> list:
+        """Read 2D volumes from the series
+
+        Args:
+            entity (list, str): DICOM series to read
+            dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+            verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
+
+        Returns:
+            list of vreg.Volume3D
+        """
+        # if isinstance(entity, str): # path to folder
+        #     return [self.volume(s, dims) for s in self.series(entity)]
+        # if len(entity) < 4: # folder, patient or study
+        #     return [self.volume(s, dims) for s in self.series(entity)]
+        
+        if dims is None:
+            dims = []
+        elif isinstance(dims, str):
+            dims = [dims]
+        else:
+            dims = list(dims)
+        dims = ['SliceLocation'] + dims
+
+        # Read dicom files
+        values = {}
+        volumes = {}
+
+        files = register.files(self.register, entity)
+        for f in tqdm(files, desc='Reading volume..', disable=(verbose==0)):
+            ds = pydicom.dcmread(f)
+            values_f = get_values(ds, dims)
+            vol = dbdataset.volume(ds)
+            slice_loc = values_f[0]
+            if slice_loc in volumes:
+                volumes[slice_loc].append(vol)
+                for d in range(len(dims)):
+                    values[slice_loc][d].append(values_f[d])
+            else:
+                volumes[slice_loc] = [vol]
+                values[slice_loc] = [[values_f[d]] for d in range(len(dims))]
+
+        # Build a volume for each slice location
+        volumes_2d = []
+        for slice_loc in volumes.keys():
+            vols_list = volumes[slice_loc]
+
+            if values == {}:
+                if len(vols_list) > 1:
+                    raise ValueError(
+                        "Cannot return a 2D volume - multiple slices at the same "
+                        "location. \n Use InstanceNumber or another suitable DICOM "
+                        "attribute as dimension to sort them.")
+                volumes_2d.append(vols_list[0])
+                continue
+
+            # Sort by coordinata values
+            vals_list = values[slice_loc]
+
+            # Format coordinates as mesh
+            coords = [np.array(v) for v in vals_list]
+            coords, inds = dbdicom.utils.arrays.meshvals(coords)
+
+            # Check that all slices have the same coordinates
+            if len(dims) > 1:
+                # Loop over all coordinates after slice location
+                for c in coords[1:]:
+                    # Loop over all slice locations
+                    for k in range(1, c.shape[0]):
+                        # Coordinate c of slice k
+                        if not np.array_equal(c[k,...], c[0,...]):
+                            raise ValueError(
+                                "Cannot build a single volume. Not all slices "
+                                "have the same coordinates."     
+                            )
+
+            # Build volumes, sort and reshape along the coordinates
+            vols = np.array(vols_list)
+            vols = vols[inds].reshape(coords[0].shape)
+        
+            # Join 2D volumes along the extra dimensions
+            vol = vreg.join(vols[0,...].reshape((1,) + vols.shape[1:]))
+
+            # For multi-dimensional volumes, set dimensions and coordinates
+            if vol.ndim > 3:
+                # Coordinates of slice 0
+                c0 = [c[0,...] for c in coords[1:]]
+                vol.set_coords(c0)
+                vol.set_dims(dims[1:])
+
+            volumes_2d.append(vol)
+            
+        return volumes_2d
+
+
+    def pixel_data(self, series:list, dims:list=None, verbose=1) -> np.ndarray:
+        """Read the pixel data from a DICOM series
+
+        Args:
+            series (list or str): DICOM series to read. This can also 
+                be a path to a folder containing DICOM files, or a 
+                patient or study to read all series in that patient or 
+                study. In those cases a list is returned.
+            dims (list, optional): Dimensions of the array.
+
+        Returns:
+            numpy.ndarray or tuple: numpy array with pixel values, with 
+                at least 3 dimensions (x,y,z). 
+        """
+        vols = self.volumes_2d(series, dims, verbose)
+        for v in vols[1:]:
+            if v.shape != vols[0].shape:
+                raise ValueError(
+                    "Cannot return a pixel array because slices have different shapes." \
+                    "Instead try using volumes_2d to return a list of 2D volumes."
+                )
+        slices = [v.values for v in vols]
+        pixel_array = np.concatenate(slices, axis=2)
+        return pixel_array
+        
+    
 
     def values(self, series:list, *attr, dims:list=None, verbose=1) -> Union[dict, tuple]:
         """Read the values of some attributes from a DICOM series
@@ -355,7 +479,7 @@ class DataBaseDicom():
 
     def write_volume(
             self, vol:Union[vreg.Volume3D, tuple], series:list, 
-            ref:list=None, 
+            ref:list=None, append=False,
         ):
         """Write a vreg.Volume3D to a DICOM series
 
@@ -363,10 +487,15 @@ class DataBaseDicom():
             vol (vreg.Volume3D): Volume to write to the series.
             series (list): DICOM series to read
             ref (list): Reference series
+            append (bool): by default write_volume will only write to a new series, 
+               and raise an error when attempting to write to an existing series. 
+               To overrule this behaviour and add the volume to an existing series, set append to True. 
+               Default is False.
         """
         series_full_name = full_name(series)
         if series_full_name in self.series():
-            raise ValueError(f"Series {series_full_name[-1]} already exists in study {series_full_name[-2]}.")
+            if not append:
+                raise ValueError(f"Series {series_full_name[-1]} already exists in study {series_full_name[-2]}.")
 
         if isinstance(vol, tuple):
             vol = vreg.volume(vol[0], vol[1])
@@ -506,108 +635,7 @@ class DataBaseDicom():
         self.write_volume(vol, series, ref)
         return self
     
-    def pixel_data(self, series:list, dims:list=None, coords=False, attr=None) -> np.ndarray:
-        """Read the pixel data from a DICOM series
 
-        Args:
-            series (list or str): DICOM series to read. This can also 
-                be a path to a folder containing DICOM files, or a 
-                patient or study to read all series in that patient or 
-                study. In those cases a list is returned.
-            dims (list, optional): Dimensions of the array.
-            coords (bool): If set to True, the coordinates of the 
-                arrays are returned alongside the pixel data
-            attr (list, optional): list of DICOM attributes that are 
-                read on the fly to avoid reading the data twice.
-
-        Returns:
-            numpy.ndarray or tuple: numpy array with pixel values, with 
-                at least 3 dimensions (x,y,z). If 
-                coords is set these are returned too as an array with 
-                coordinates of the slices according to dims. If include 
-                is provided the values are returned as a dictionary in the last 
-                return value. 
-        """
-        if isinstance(series, str): # path to folder
-            return [self.pixel_data(s, dims, coords, attr) for s in self.series(series)]
-        if len(series) < 4: # folder, patient or study
-            return [self.pixel_data(s, dims, coords, attr) for s in self.series(series)]
-
-        if dims is None:
-            dims = ['InstanceNumber']
-        elif np.isscalar(dims):
-            dims = [dims]
-        else:
-            dims = list(dims)
-
-        # Ensure return_vals is a list
-        if attr is None:
-            params = []
-        elif np.isscalar(attr):
-            params = [attr]
-        else:
-            params = list(attr)
-
-        files = register.files(self.register, series)
-        
-        # Read dicom files
-        coords_array = []
-        arrays = np.empty(len(files), dtype=dict)
-        if attr is not None:
-            values = np.empty(len(files), dtype=dict)
-        for i, f in tqdm(enumerate(files), desc='Reading pixel data..'):
-            ds = pydicom.dcmread(f)  
-            coords_array.append(get_values(ds, dims))
-            # save as dict so numpy does not stack as arrays
-            arrays[i] = {'pixel_data': dbdataset.pixel_data(ds)}
-            if attr is not None:
-                values[i] = {'values': get_values(ds, params)}
-
-        # Format as mesh
-        coords_array = np.stack([v for v in coords_array], axis=-1)
-        coords_array, inds = dbdicom.utils.arrays.meshvals(coords_array)
-
-        arrays = arrays[inds].reshape(coords_array.shape[1:])
-        arrays = np.stack([a['pixel_data'] for a in arrays.reshape(-1)], axis=-1)
-        arrays = arrays.reshape(arrays.shape[:2] + coords_array.shape[1:])
-
-        if attr is None:
-            if coords:
-                return arrays, coords_array
-            else:
-                return arrays
-
-        # Return values as a dictionary
-        values = values[inds].reshape(-1)
-        values_dict = {}
-        for p in range(len(params)):
-            # Get the type from the first value
-            vp0 = values[0]['values'][p]
-            # Build an array of the right type
-            vp = np.zeros(values.size, dtype=type(vp0))
-            # Populate the array with values for parameter p
-            for i, v in enumerate(values):
-                vp[i] = v['values'][p]
-            # Reshape values for parameter p
-            vp = vp.reshape(coords_array.shape[1:])
-            # Eneter in the dictionary
-            values_dict[params[p]] = vp
-
-        # If only one, return as value
-        if len(params) == 1:
-            values_return = values_dict[attr[0]]
-        else:
-            values_return = values_dict
-        
-        # problem if the values are a list. Needs an array with a prespeficied dtype
-        # values = values[inds].reshape(coords_array.shape[1:])
-        # values = np.stack([a['values'] for a in values.reshape(-1)], axis=-1) 
-        # values = values.reshape((len(params), ) + coords_array.shape[1:])
-
-        if coords:
-            return arrays, coords_array, values_return
-        else:
-            return arrays, values_return
         
 
 
@@ -1120,7 +1148,7 @@ def infer_slice_spacing(vols):
         distances = np.around(distances, 2)
         slice_spacing_d = np.unique(distances)
 
-        # Check if unique - otherwise this is not a volume
+        # Check if slice spacings are unique - otherwise this is not a volume
         if len(slice_spacing_d) > 1:
             raise ValueError(
                 'Cannot build a volume - spacings between slices are not unique.'
@@ -1135,6 +1163,7 @@ def infer_slice_spacing(vols):
         slice_spacing[d] = slice_spacing_d
 
     # Check slice_spacing is the same across dimensions
+    # Not sure if this is possible as volumes are sorted by slice location
     slice_spacing = np.unique(slice_spacing)
     if len(slice_spacing) > 1:
         raise ValueError(
@@ -1142,8 +1171,4 @@ def infer_slice_spacing(vols):
         )    
 
     return vols.reshape(shape)
-
-
-
-
 
