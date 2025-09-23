@@ -12,6 +12,7 @@ os.makedirs(tmp, exist_ok=True)
 
 
 
+
 def test_write_volume():
 
     values = 100*np.random.rand(128, 192, 20).astype(np.float32)
@@ -195,6 +196,8 @@ def test_edit():
     assert np.array_equal(tr, new_tr)
     assert np.array_equal(pn, new_pn)
 
+    shutil.rmtree(tmp)
+
 
 def test_write_database():
     values = 100*np.random.rand(16, 16, 4).astype(np.float32)
@@ -290,12 +293,12 @@ def test_copy():
 
 if __name__ == '__main__':
 
-    # test_write_volume()
+    test_write_volume()
     test_volumes_2d()
-    # test_values()
-    # test_edit()
-    # test_volume()
-    # test_write_database()
-    # test_copy()
+    test_values()
+    test_edit()
+    test_volume()
+    test_write_database()
+    test_copy()
 
     print('All api tests have passed!!!')

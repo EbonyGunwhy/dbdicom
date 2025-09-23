@@ -334,7 +334,7 @@ class DataBaseDicom():
         for f in tqdm(files, desc='Reading volume..', disable=(verbose==0)):
             ds = pydicom.dcmread(f)
             values_f = get_values(ds, dims)
-            vol = dbdataset.volume(ds)
+            vol = dbdataset.volume(ds, multislice=True)
             slice_loc = values_f[0]
             if slice_loc in volumes:
                 volumes[slice_loc].append(vol)
