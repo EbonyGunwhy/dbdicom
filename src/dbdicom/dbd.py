@@ -479,7 +479,7 @@ class DataBaseDicom():
 
     def write_volume(
             self, vol:Union[vreg.Volume3D, tuple], series:list, 
-            ref:list=None, append=False,
+            ref:list=None, append=False, verbose=1,
         ):
         """Write a vreg.Volume3D to a DICOM series
 
@@ -491,6 +491,7 @@ class DataBaseDicom():
                and raise an error when attempting to write to an existing series. 
                To overrule this behaviour and add the volume to an existing series, set append to True. 
                Default is False.
+            verbose (bool): if set to 1, a progress bar is shown
         """
         series_full_name = full_name(series)
         if series_full_name in self.series():
@@ -517,13 +518,13 @@ class DataBaseDicom():
 
         if vol.ndim==3:
             slices = vol.split()
-            for i, sl in tqdm(enumerate(slices), desc='Writing volume..'):
+            for i, sl in tqdm(enumerate(slices), desc='Writing volume..', disable=verbose==0):
                 dbdataset.set_volume(ds, sl)
                 self._write_dataset(ds, attr, n + 1 + i)
         else:
             i=0
             vols = vol.separate().reshape(-1)
-            for vt in tqdm(vols, desc='Writing volume..'):
+            for vt in tqdm(vols, desc='Writing volume..', disable=verbose==0):
                 slices = vt.split()
                 for sl in slices:
                     dbdataset.set_volume(ds, sl)

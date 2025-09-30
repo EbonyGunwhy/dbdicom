@@ -278,7 +278,7 @@ def values(series:list, *attr, dims:list=None, verbose=1) -> Union[np.ndarray, l
 
 
 def write_volume(vol:Union[vreg.Volume3D, tuple], series:list, 
-                 ref:list=None, append=False):
+                 ref:list=None, append=False, verbose=1):
     """Write a vreg.Volume3D to a DICOM series
 
     Args:
@@ -289,9 +289,10 @@ def write_volume(vol:Union[vreg.Volume3D, tuple], series:list,
             and raise an error when attempting to write to an existing series. 
             To overrule this behaviour and add the volume to an existing series, set append to True. 
             Default is False.
+        verbose (bool): if set to 1, a progress bar is shown. verbose=0 does not show updates.
     """
     dbd = open(series[0])
-    dbd.write_volume(vol, series, ref, append)
+    dbd.write_volume(vol, series, ref, append, verbose)
     dbd.close()
 
 
