@@ -85,8 +85,8 @@ def write(ds, file, status=None):
     dir = os.path.dirname(file)
     if not os.path.exists(dir):
         os.makedirs(dir)
-    #ds.save_as(file, write_like_original=False) # deprecated
-    ds.save_as(file, enforce_file_format=True)
+    ds.save_as(file, write_like_original=False) # deprecated
+    # ds.save_as(file, enforce_file_format=True)
 
 
 def codify(source_file, save_file, **kwargs):
@@ -232,11 +232,20 @@ def set_lut(ds, RGB):
 
 
 
-def affine(ds):
-    # Spacing Between Slices is not required so can be absent
-    slice_spacing = ds.get("SpacingBetweenSlices")
-    if slice_spacing is None:
+def affine(ds, multislice=False):
+    
+    if multislice:
+        # For 2D scans the slice_spacing is the slice thickness
         slice_spacing = ds.get("SliceThickness")
+    else:
+        # For 3D scans the slice spacing is the SpacingBetweenSlices
+        # Spacing Between Slices is not required so can be absent
+        # This is less critical because when reading a 3D volume the 
+        # definitive slice_spacing is inferred from the slice positions.
+        slice_spacing = ds.get("SpacingBetweenSlices")
+        if slice_spacing is None:
+            slice_spacing = ds.get("SliceThickness")
+
     return image.affine_matrix(
         get_values(ds, 'ImageOrientationPatient'), 
         get_values(ds, 'ImagePositionPatient'), 
@@ -339,8 +348,8 @@ def set_pixel_data(ds, array):
 #     ds.PixelData = array.tobytes()
 
 
-def volume(ds):
-    return vreg.volume(pixel_data(ds), affine(ds))
+def volume(ds, multislice=False):
+    return vreg.volume(pixel_data(ds), affine(ds, multislice=multislice))
 
 
 
