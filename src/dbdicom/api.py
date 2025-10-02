@@ -240,6 +240,23 @@ def volume(series:list, dims:list=None, verbose=1) -> vreg.Volume3D:
     return vol
 
 
+def volumes_2d(series:list, dims:list=None, verbose=1) -> vreg.Volume3D:
+    """Read 2D volumes from the series
+
+    Args:
+        entity (list, str): DICOM series to read
+        dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+        verbose (bool, optional): If set to 1, shows progress bar. Defaults to 1.
+
+    Returns:
+        list of vreg.Volume3D
+    """
+    dbd = open(series[0])
+    vol = dbd.volumes_2d(series, dims, verbose)
+    dbd.close()
+    return vol
+
+
 def values(series:list, *attr, dims:list=None, verbose=1) -> Union[np.ndarray, list]:
     """Read the values of some attributes from a DICOM series
 
@@ -259,16 +276,23 @@ def values(series:list, *attr, dims:list=None, verbose=1) -> Union[np.ndarray, l
     return values
 
 
-def write_volume(vol:Union[vreg.Volume3D, tuple], series:list, ref:list=None):
+
+def write_volume(vol:Union[vreg.Volume3D, tuple], series:list, 
+                 ref:list=None, append=False, verbose=1):
     """Write a vreg.Volume3D to a DICOM series
 
     Args:
         vol (vreg.Volume3D or tuple): Volume to write to the series.
         series (list): DICOM series to read
         dims (list, optional): Non-spatial dimensions of the volume. Defaults to None.
+        append (bool): by default write_volume will only write to a new series, 
+            and raise an error when attempting to write to an existing series. 
+            To overrule this behaviour and add the volume to an existing series, set append to True. 
+            Default is False.
+        verbose (bool): if set to 1, a progress bar is shown. verbose=0 does not show updates.
     """
     dbd = open(series[0])
-    dbd.write_volume(vol, series, ref)
+    dbd.write_volume(vol, series, ref, append, verbose)
     dbd.close()
 
 
@@ -337,39 +361,27 @@ def files(entity:list) -> list:
     return files
 
 
-def pixel_data(series:list, dims:list=None, coords=False, attr:list=None) -> tuple:
+def pixel_data(series:list, dims:list=None, verbose=1) -> tuple:
     """Read the pixel data from a DICOM series
 
     Args:
-        series (list): DICOM series to read
+        series (list or str): DICOM series to read. This can also 
+            be a path to a folder containing DICOM files, or a 
+            patient or study to read all series in that patient or 
+            study. In those cases a list is returned.
         dims (list, optional): Dimensions of the array.
-        coords (bool): If set to True, the coordinates of the 
-            slices are returned alongside the pixel data.
-        attr (list, optional): list of DICOM attributes that are 
-            read on the fly to avoid reading the data twice.
 
     Returns:
-        tuple: numpy array with pixel values and an array with 
-            coordinates of the slices according to dims. If include 
-            is provide these are returned as a dictionary in a third 
-            return value.
+        numpy.ndarray or tuple: numpy array with pixel values, with 
+            at least 3 dimensions (x,y,z). 
     """
     if isinstance(series, str):
         series = [series]
     dbd = open(series[0])
-    array = dbd.pixel_data(series, dims, coords, attr)
+    array = dbd.pixel_data(series, dims, verbose)
     dbd.close()
     return array
 
-# write_pixel_data()
-# values()
-# write_values()
-# to_png(series, folder, dims)
-# to_npy(series, folder, dims)
-# split(series, attribute)
-# extract(series, *kwargs) # subseries
-
-# zeros(series, shape, dims)
 
 def unique(pars:list, entity:list) -> dict:
     """Return a list of unique values for a DICOM entity
@@ -420,6 +432,8 @@ def _copy_and_extract_zips(src_folder, dest_folder):
                 if file.lower().endswith('.zip'):
                     try:
                         zip_dest_folder = dest_file_path[:-4]
+                        if os.path.exists(zip_dest_folder):
+                            continue
                         with zipfile.ZipFile(src_file_path, 'r') as zip_ref:
                             zip_ref.extractall(zip_dest_folder)
                         #tqdm.write(f"Extracted ZIP: {src_file_path}")
@@ -427,6 +441,8 @@ def _copy_and_extract_zips(src_folder, dest_folder):
                     except zipfile.BadZipFile:
                         tqdm.write(f"Bad ZIP file skipped: {src_file_path}")
                 else:
+                    if os.path.exists(dest_file_path):
+                        continue
                     shutil.copy2(src_file_path, dest_file_path)
 
                 pbar.update(1)
